@@ -71,9 +71,9 @@ UltimateTicTacToe::UltimateTicTacToe() {
 
 // 含参构造函数，用于从特定状态初始化游戏
 UltimateTicTacToe::UltimateTicTacToe(const vector<vector<int>>& board,
-                                        pair<int, int> next_board,
-                                        int current_player, // 1为 X，2为O
-                                        int step) {
+    pair<int, int> next_board,
+    int current_player, // 1为 X，2为O
+    int step) {
     this->board = board;
     this->meta_board = vector<vector<int>>(3, vector<int>(3, 0));
     this->next_board = next_board;
@@ -233,3 +233,21 @@ int UltimateTicTacToe::get_current_player() {
     return current_player;
 }
 
+// 展示函数
+void UltimateTicTacToe::print_board() {
+    std::cout << "---------------------\n";
+    for (int i = 0; i < 9; ++i) {
+        if (i % 3 == 0 && i != 0) {
+            std::cout << "---------------------\n";
+        }
+        for (int j = 0; j < 9; ++j) {
+            if (j % 3 == 0 && j != 0) {
+                std::cout << "| ";
+            }
+            char mark = (board[i][j] == 0) ? '.' : (board[i][j] == 1 ? 'X' : 'O');
+            std::cout << mark << ' ';
+        }
+        std::cout << '\n';
+    }
+    std::cout << '\n';
+}

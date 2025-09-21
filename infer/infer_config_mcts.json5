@@ -1,0 +1,27 @@
+// using JSON5 format   
+{
+    // 模型结构参数
+    // 确保加载的模型参数与此处一致
+    "model": {
+        "in_channels": 6, // 初始卷积层输入通道数（当前玩家、对手、空位状态组成三通道）
+        // in_channels 由 tensor转换函数的实现决定，本质上不可更改，代码中的值与此处无关
+        "input_hidden_channels": 32, // 初始卷积层输出通道数（3*3*in_channels大小的卷积核的数量）
+        "num_residual_blocks": 5, // 残差块数量
+        "policy_hidden_channels": 16, // 策略卷积层1输出通道数
+        "value_dim": 128, // 价值线性层宽度
+    },
+    // 模型训练参数
+    "infer": {
+        // MCTS参数
+        "mcts": {
+            "c_puct": 0.8, // 计算主探索项
+            "puct2": 0.0, // 计算额外探索项
+            "noise_sigma": 0.01, // 噪声参数(噪声服从均值为0，标准差为 noise_sigma 的正态分布)
+            "train_simulation": 50, // MCTS搜索次数
+            "update_strategy": "mean", // 节点val值更新策略
+        },
+        // 模型保存参数
+        "model_path": "/root/Desktop/AIGame/0919_UTT/model_cpu/model_turn38_cpu.pt", // 基础模型权重的路径
+        "ai_player": 1, // AI执子方，1为先手，2为后手
+    }
+}

@@ -2,11 +2,12 @@
 #include <torch/torch.h>
 #include "json5cpp.h"
 #include "game.h"
-#include "minimax.h"
+#include "mcts.h"
 #include "network.hpp"
 
 #include <fstream>
 #include <iostream>
+#include <random>
 #include <string>
 #include <vector>
 #include <filesystem>
@@ -60,8 +61,17 @@ public:
         return model;
     }
 
-    int getMaxdepth() {
-        return config_json["infer"].get("max_depth", 4).asInt();
+    MCTSParams getMCTSParams() {
+        MCTSParams params;
+        auto mcts_json = config_json["infer"]["mcts"];
+        params.c_puct = mcts_json.get("c_puct", 0.8).asFloat();
+        params.puct2 = mcts_json.get("puct2", 0.0).asFloat();
+        params.noise_sigma = mcts_json.get("noise_sigma", 0.01).asFloat();
+        params.train_simulation = mcts_json.get("train_simulation", 30).asInt();
+        params.update_strategy = mcts_json.get("update_strategy", "max").asString();
+        params.train_buff = mcts_json.get("train_buff", 0.8).asFloat();
+        // 使用 0.8 防止兼容性问题
+        return params;
     }
 
     // 获取 AI 执子方
@@ -115,14 +125,16 @@ int main(int argc, char* argv[]) {
 
     // 初始化模型，获取参数
     ValueCNN model = config.getModel();
-
+    MCTSParams mctsParams = config.getMCTSParams();
+    // 创建添加噪声使用的随机数引擎
+    std::random_device rd;
+    auto rand_engine = std::mt19937(rd());
+    MCTS mcts(model, rand_engine, mctsParams);
     std::cout << "初始化完成\n";
     // 创建初始棋盘
     UltimateTicTacToe board;
     // 设置AI执子方
     int ai_player = config.getAIPlayer();
-    int max_depth = config.getMaxdepth();
-    AIPlayer aiplayer(ai_player, max_depth, model);
     std::cout << "AI执子方: " << ai_player << std::endl;
     std::cout << "对弈开始\n";
     // 输出空棋盘
@@ -132,8 +144,9 @@ int main(int argc, char* argv[]) {
         if (ai_player == board.get_current_player()) {
             // AI 走子
             std::cout << "AI 正在思考...\n";
-            UltimateTicTacToe current_game = board;
-            auto move = aiplayer.get_best_move(current_game);
+            auto [value, probs, root_node] = std::get<std::tuple<float, std::vector<std::vector<float>>,
+                std::shared_ptr<MCTSNode>>>(mcts.run(board, true));
+            auto move = mcts.calc_next_move(root_node, probs, 0.0f);
             std::cout << "AI 走子: (" << move.first << ',' << move.second << ")\n";
             board.make_move(move);
         } else {

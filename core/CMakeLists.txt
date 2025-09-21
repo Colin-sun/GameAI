@@ -1,7 +1,8 @@
 add_library(core STATIC
             game.cpp
             network.cpp
-            mcts.cpp)
+            mcts.cpp
+            minimax.cpp)
 
 target_include_directories(core PUBLIC
                            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>

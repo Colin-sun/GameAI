@@ -5,10 +5,14 @@
 #include <utility>
 #include <random>
 #include <cstdint>
+#include <iostream>
 
 const int BOARD_SIZE = 9; // 棋盘边长
 const int META_BOARD_SIZE = 3; // 小棋盘个数：3x3
 const int STATE_NUM = 3; // 每个格子的状态数：0空，1X，2O
+
+// 前置声明AIPlayer类，以便于实现 undo_move
+class AIPlayer;
 
 class UltimateTicTacToe {
 private:
@@ -25,15 +29,16 @@ private:
     void update_meta_board();
     // 步数（评估函数使用）
     int step;
+    friend class AIPlayer;
 
 public:
     // 默认构造空棋盘
     UltimateTicTacToe();
     // 含参构造函数
     UltimateTicTacToe(const std::vector<std::vector<int>>& board,
-                      std::pair<int, int> next_board, // 下一步可下的小棋盘的位置，-1, -1表示任意位置可下
-                      int current_player, // 1为 X，2为O
-                      int step);
+        std::pair<int, int> next_board, // 下一步可下的小棋盘的位置，-1, -1表示任意位置可下
+        int current_player, // 1为 X，2为O
+        int step);
     // 检查在九宫格棋盘上的指定位置是否为有效移动
     bool is_valid_move(int row, int col);
     // 获取所有有效移动
@@ -50,4 +55,7 @@ public:
     std::vector<std::vector<int>> get_meta_board(); // 获取子棋盘状态
     int get_step(); // 获取当前步数
     int get_current_player(); // 获取当前玩家
+
+    // 展示函数
+    void print_board();
 };

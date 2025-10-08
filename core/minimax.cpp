@@ -29,26 +29,7 @@ float AIPlayer::evaluate(UltimateTicTacToe& board) {
     }
 }
 
-void AIPlayer::undo_move(UltimateTicTacToe& game, std::pair<int, int> move) {
-    int row = move.first;
-    int col = move.second;
-    game.board[row][col] = 0;
-    // 更新大棋盘状态
-    game.update_meta_board();
 
-    // 设置下一个玩家必须下的小棋盘
-    int local_row = row % 3;
-    int local_col = col % 3;
-    if (game.meta_board[local_row][local_col] == 0) {
-        game.next_board = std::make_pair(local_row, local_col);
-    } else {
-        game.next_board = std::make_pair(-1, -1); // 重置为无效位置
-    }
-
-    // 切换玩家
-    game.current_player = 3 - game.current_player; // 1->2, 2->1
-    game.step -= 1; // 步数减 1
-}
 
 // minimax 带 alpha-beta 剪枝搜索，返回评估值
 // depth: 当前搜索深度
@@ -67,7 +48,7 @@ float AIPlayer::minimax(UltimateTicTacToe& board, int depth, bool is_maximizing,
                 float value = minimax(board, depth + 1, false, alpha, beta);
                 max_value = std::max(max_value, value);
                 alpha = std::max(alpha, value);
-                undo_move(board, move);
+                board.undo_move(move);
                 if (beta <= alpha) {
                     return max_value;
                 }
@@ -79,7 +60,7 @@ float AIPlayer::minimax(UltimateTicTacToe& board, int depth, bool is_maximizing,
                 float value = minimax(board, depth + 1, true, alpha, beta);
                 min_value = std::min(min_value, value);
                 beta = std::min(beta, value);
-                undo_move(board, move);
+                board.undo_move(move);
                 if (beta <= alpha) {
                     return min_value;
                 }
@@ -95,7 +76,7 @@ std::pair<int, int> AIPlayer::get_best_move(UltimateTicTacToe& board) {
     for (auto move : board.get_valid_moves()) {
         if (board.make_move(move)) {
             float move_value = minimax(board, 1, false, -INFINITY, INFINITY);
-            undo_move(board, move);
+            board.undo_move(move);
             if (move_value > best_value) {
                 best_value = move_value;
                 best_move = move;

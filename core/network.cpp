@@ -116,52 +116,6 @@ float ValueCNNImpl::calc_value(torch::Tensor x) {
     return value.item<float>();
 }
 
-// 棋盘状态转张量
-torch::Tensor board_to_tensor(UltimateTicTacToe& current_game) {
-    auto options = torch::TensorOptions().dtype(torch::kFloat32);
-
-    // 获取棋盘状态
-    auto board = current_game.get_board();
-    auto meta_board = current_game.get_meta_board();
-    auto current_player = current_game.get_current_player();
-    if (board.empty() || meta_board.empty()) {
-        throw std::runtime_error("Invalid board data");
-    }
-
-    // 初始化张量6个通道
-    auto board_player = torch::zeros({ BOARD_SIZE, BOARD_SIZE }, options);
-    auto board_opponent = torch::zeros({ BOARD_SIZE, BOARD_SIZE }, options);
-    auto board_empty = torch::zeros({ BOARD_SIZE, BOARD_SIZE }, options);
-
-    // 这里额外放大了向量的维数
-    auto meta_board_player = torch::zeros({ BOARD_SIZE, BOARD_SIZE }, options);
-    auto meta_board_opponent = torch::zeros({ BOARD_SIZE, BOARD_SIZE }, options);
-    auto meta_board_empty = torch::zeros({ BOARD_SIZE, BOARD_SIZE }, options);
-
-    // 填充每个通道的值
-    for (int i = 0; i < BOARD_SIZE; ++i) {
-        for (int j = 0; j < BOARD_SIZE; ++j) {
-            board_player[i][j] = (board[i][j] == current_player) ? 1.0f : 0.0f;
-            board_opponent[i][j] = (board[i][j] == 3 - current_player) ? 1.0f : 0.0f;
-            board_empty[i][j] = (board[i][j] == 0) ? 1.0f : 0.0f;
-        }
-    }
-
-    for (int i = 0; i < META_BOARD_SIZE; ++i) {
-        for (int j = 0; j < META_BOARD_SIZE; ++j) {
-            meta_board_player[i][j] = (meta_board[i][j] == current_player) ? 1.0f : 0.0f;
-            meta_board_opponent[i][j] = (meta_board[i][j] == 3 - current_player) ? 1.0f : 0.0f;
-            meta_board_empty[i][j] = (meta_board[i][j] == 0) ? 1.0f : 0.0f;
-        }
-    }
-
-    // 堆叠成6通道的张量
-    return torch::stack({
-        board_player, board_opponent, board_empty,
-        meta_board_player, meta_board_opponent, meta_board_empty
-        }, 0);
-}
-
 // 数据加载器实现
 MyStackTransform::OutputBatchType MyStackTransform::apply_batch(const InputBatchType& batch) {
     std::vector<torch::Tensor> data, policies, values, weights;

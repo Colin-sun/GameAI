@@ -6,8 +6,6 @@
 #include <fstream>
 #include <iostream>
 
-const int IN_CHANNELS = 6;
-
 // 定义残差块
 struct ResidualBlockImpl : torch::nn::Module {
     torch::nn::Conv2d conv1;
@@ -60,9 +58,6 @@ struct ValueCNNImpl : torch::nn::Module {
 };
 TORCH_MODULE(ValueCNN);
 
-// 将棋盘状态转为 6通道张量
-// 当前玩家指的是即将落子的一方
-torch::Tensor board_to_tensor(UltimateTicTacToe& current_game);
 
 // 创建自定义数据加载器
 using MyExample = torch::data::Example<

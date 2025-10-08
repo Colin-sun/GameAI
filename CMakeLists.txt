@@ -1,7 +1,8 @@
+# 添加对 ENABLE_TRAIN_TEST 的支持
 cmake_minimum_required(VERSION 3.18)
 project(AIUTT)
 
-set(CMAKE_C_COMPILER   gcc-12)
+set(CMAKE_C_COMPILER gcc-12)
 set(CMAKE_CXX_COMPILER g++-12)
 
 # 设置默认构建类型（如果没有指定，默认为 Release）
@@ -9,9 +10,14 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
+# 设置 C++ 标准和编译警告
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 # 选项
-option(ENABLE_TRAIN "Build training executable" ON)
-option(ENABLE_INFER "Build inference executable" ON)
+option(ENABLE_TRAIN "Build training executable" OFF)
+option(ENABLE_INFER "Build infer executable" OFF)
+option(ENABLE_TRAIN_TEST "Build train_test executable" OFF)
 
 # 统一找库
 set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/libtorch)
@@ -21,14 +27,16 @@ find_package(Torch REQUIRED)
 # 把 torch/OpenMP/jsoncpp 打包成接口库
 add_library(common_deps INTERFACE)
 target_link_libraries(common_deps INTERFACE
-                      ${TORCH_LIBRARIES}
-                      /usr/lib/x86_64-linux-gnu/libjsoncpp.so)
+  ${TORCH_LIBRARIES}
+  /usr/lib/x86_64-linux-gnu/libjsoncpp.so)
 target_include_directories(common_deps INTERFACE
-                           ${TORCH_INCLUDE_DIRS})
+  ${TORCH_INCLUDE_DIRS})
 
 # 关键：先加 core，再管子目录
 add_subdirectory(core)
-if(ENABLE_TRAIN)
+
+# 根据选项添加子目录
+if(ENABLE_TRAIN OR ENABLE_TRAIN_TEST)
   add_subdirectory(train)
 endif()
 if(ENABLE_INFER)

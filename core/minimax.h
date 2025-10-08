@@ -18,5 +18,4 @@ private:
     ValueCNN model; // 评估函数模型
     float minimax(UltimateTicTacToe& board, int depth, bool is_maximizing, float alpha, float beta);
     float evaluate(UltimateTicTacToe& board);
-    void undo_move(UltimateTicTacToe& game, std::pair<int, int> move); // 撤销走子，只能撤销最近走的一步
 };

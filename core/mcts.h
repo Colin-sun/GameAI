@@ -66,7 +66,7 @@ public:
         std::pair<int, int> move = std::make_pair(-1, -1));
 
     // 运行MCTS搜索
-    RunReturn run(const UltimateTicTacToe& root_board, bool return_root = false);
+    RunReturn run(UltimateTicTacToe& root_board, bool return_root = false);
 
     // 选择子节点
     std::shared_ptr<MCTSNode> select_child(std::shared_ptr<MCTSNode> node);
@@ -75,7 +75,7 @@ public:
     void expand_node(std::shared_ptr<MCTSNode> node);
 
     // 使用原始评估函数评估节点
-    float evaluate_node(std::shared_ptr<MCTSNode> node);
+    float evaluate_node(std::shared_ptr<MCTSNode> node, int max_player);
 
     /// @brief 从 MCTS节点中提取搜索结果
     /// @param root_node MCTS节点
@@ -115,8 +115,10 @@ public:
 
     // 调用board的终局判断方法
     bool is_terminal();
-    // 评估函数
-    float evaluate();
+    // 原始评估函数
+    float evaluate(int max_player);
+    // 使用神经网络评估
+    float nn_evaluate(int max_player);
 
 };
 

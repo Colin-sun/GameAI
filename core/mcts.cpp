@@ -37,14 +37,14 @@ bool MCTSNode::is_terminal() {
 // 评估函数
 // 参照原代码定义，0 为平局，负值为先手胜，正值为后手胜
 // 同时鼓励 ai在更少的步数内获胜
-float MCTSNode::evaluate() {
+float MCTSNode::evaluate(int max_player) {
     auto winner = board.get_winner();
     auto step = board.get_step();
     if (winner == 0) {
         return 0;
-    } else if (winner == 1) {
+    } else if (winner == 3 - max_player) {
         return -(1 - step * 3e-4); // 鼓励更快获胜
-    } else if (winner == 2) {
+    } else if (winner == max_player) {
         return 1 - step * 3e-4;
     } else {
         return 0 + step * 3e-4; // 鼓励更慢平局
@@ -75,7 +75,7 @@ std::shared_ptr<MCTSNode> MCTS::new_node(const UltimateTicTacToe& board, std::sh
 }
 
 // 运行MCTS搜索
-RunReturn MCTS::run(const UltimateTicTacToe& root_board, bool return_root) {
+RunReturn MCTS::run(UltimateTicTacToe& root_board, bool return_root) {
     std::shared_ptr<MCTSNode> root_node = new_node(root_board);
     if (!root_node) {
         throw std::runtime_error("Failed to create root node.");
@@ -87,6 +87,7 @@ RunReturn MCTS::run(const UltimateTicTacToe& root_board, bool return_root) {
     // 一般 40 步内棋局结束
     std::vector<std::shared_ptr<MCTSNode>> search_path;
     search_path.reserve(50);
+    int max_player = root_board.get_current_player();
     for (int i = 0; i < train_simulation; ++i) {
         std::shared_ptr<MCTSNode> current_node = root_node;
         search_path.clear();
@@ -100,10 +101,10 @@ RunReturn MCTS::run(const UltimateTicTacToe& root_board, bool return_root) {
         if (!current_node->is_terminal()) {
             expand_node(current_node);
         } else {
-            current_node->value = evaluate_node(current_node);
+            current_node->value = evaluate_node(current_node, max_player);
         }
 
-        float value = evaluate_node(current_node);
+        float value = evaluate_node(current_node, max_player);
 
         // 更新节点值
         for (auto it = search_path.rbegin(); it != search_path.rend(); ++it) {
@@ -240,9 +241,9 @@ void MCTS::expand_node(std::shared_ptr<MCTSNode> node) {
 
 // 使用原始评估函数评估节点
 // 逻辑：终局使用评估函数，非终局使用神经网络估值
-float MCTS::evaluate_node(std::shared_ptr<MCTSNode> node) {
+float MCTS::evaluate_node(std::shared_ptr<MCTSNode> node, int max_player) {
     if (node->is_terminal()) {
-        return node->evaluate();
+        return node->evaluate(max_player);
     } else {
         return node->value;
     }

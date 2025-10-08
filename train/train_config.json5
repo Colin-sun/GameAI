@@ -27,7 +27,7 @@
         "generation": {
             "num_samples": 2, // 训练时每轮生成的初始局面数
             "empty_ratio": 0.2, // 每轮生成的初始局面数空盘的比例
-            "select_iteration_num": 1000, // 随机生成的初始局面筛选的次数
+            "select_iteration_num": 10, // 随机生成的初始局面筛选的次数
             /*
                 随机生成局面时，要选择胜率最平均的初始局面（即模型价值头输出最接近0）
                 select_iteration_num 为迭代寻找最小值的次数

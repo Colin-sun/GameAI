@@ -1,0 +1,84 @@
+// using JSON5 format   
+{
+    // 模型结构参数
+    "model": {
+        "in_channels": 3, // 初始卷积层输入通道数（当前玩家、对手、空位状态组成三通道）
+        // in_channels 由 tensor转换函数的实现决定，本质上不可更改，代码中的值与此处无关
+        "input_hidden_channels": 16, // 初始卷积层输出通道数（3*3*in_channels大小的卷积核的数量）
+        "num_residual_blocks": 2, // 残差块数量
+        "policy_hidden_channels": 16, // 策略卷积层1输出通道数
+        "value_dim": 32, // 价值线性层宽度
+    },
+    // 模型训练参数
+    "train": {
+        // 数据生成默认使用CPU并行，下面指定的是训练时的设备
+        "device": "default", // 训练设备
+        //  default: 优先GPU，其次 CPU；
+        // "device": "cpu", // 强制使用 CPU
+        // "device": "gpu", // 指定 GPU 时，若无可用 GPU 则使用 CPU
+        "batch_size": 256, // 批量大小
+        "num_epochs": 15, // 训练轮数
+        "learning_rate": 1e-4, // 学习率
+        "patience": 3, // x个epoch val_loss没有提升时，停止训练
+        "train_data_ratio": 0.9, // 训练集比例
+        "turns": 200, // 训练loop的轮数
+        "num_workers": 4, // 程序各阶段使用的线程数
+        // 对弈数据生成参数
+        "generation": {
+            "num_samples": 50, // 训练时每轮生成的初始局面数
+            "empty_ratio": 0.2, // 每轮生成的初始局面数空盘的比例
+            "select_iteration_num": 10, // 随机生成的初始局面筛选的次数
+            /*
+                随机生成局面时，要选择胜率最平均的初始局面（即模型价值头输出最接近0）
+                select_iteration_num 为迭代寻找最小值的次数
+            */
+            "num_moves_max": 2, // 生成随机初始局面时，每轮最多落子数
+        },
+        // MCTS参数
+        "mcts": {
+            "c_puct": 0.8, // 计算主探索项
+            "puct2": 0.0, // 计算额外探索项
+            "noise_sigma": 0.01, // 噪声参数(噪声服从均值为 0，标准差为 noise_sigma 的正态分布)
+            "train_simulation": 100, // MCTS搜索次数
+            "update_strategy": "mean", // 节点val值更新策略
+            "train_buff": 0.8, // 训练样本权重
+        },
+        // 模型保存参数
+        "base_model_path": null, // 基础模型权重的路径
+        "save_path": "0919_Test_model", // 训练数据输出路径
+        // 默认在项目根目录下创建 save_path 保存
+    },
+    // 测试模型在特定情况下的评估值变化
+    "debug": [
+        {
+            // 终局状态
+            "out_id" : "终局状态, value ≈ -1",
+            "board" : [
+                [1, 2, 2],
+                [0, 1, 0],
+                [0, 0, 1],
+            ],
+            "current_player" : 2, // 当前玩家
+        },
+        {
+            // 近似终局状态
+            "out_id" : "近似终局状态, value ≈ 1",
+            "board" : [
+                [1, 2, 2],
+                [1, 1, 0],
+                [2, 0, 0],
+            ],
+            "current_player" : 1, // 当前玩家
+        },
+        {
+            // 空盘
+            "out_id" : "空盘, value ≈ 0.5",
+            "board" : [
+                [0, 0, 0],
+                [0, 0, 0],
+                [0, 0, 0],
+            ],
+            "current_player" : 1, // 当前玩家
+        }
+    ]
+}

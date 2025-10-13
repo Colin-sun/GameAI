@@ -1,4 +1,4 @@
-
+<!-- 
 编译 train 的 release 版本：
 cmake -B build -DENABLE_TRAIN=ON -DENABLE_INFER=OFF -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
@@ -24,3 +24,16 @@ rm -rf build/
 cmake -B build -DENABLE_TRAIN_TEST=ON -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
 ./build/train/train_test -config /root/Desktop/AIGame/train/train_test_config.json5
+
+测试train编译流程：
+rm -rf build/
+cmake -B build -DENABLE_TRAIN_TEST=ON -DCMAKE_BUILD_TYPE=Debug
+cmake --build build -j
+./build/train/train_test -config /root/Desktop/AIGame/train/train_test_config.json5 -->
+
+MCTSPure编译流程：
+rm -rf build/
+cmake -B build -DENABLE_MCTS_PURE=ON -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+./build/humanplay/gameplay -config /root/Desktop/AIGame/humanplay/infer_config_mcts_pure.json5
+

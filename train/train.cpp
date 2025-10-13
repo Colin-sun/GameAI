@@ -1,4 +1,6 @@
 // 定义了读取配置文件以及训练用的函数
+// TODO 拆分函数，翻译注释
+// TODO 对接 MCTS 新实现
 #include <torch/torch.h>
 #include "json5cpp.h"
 #include "game.h"

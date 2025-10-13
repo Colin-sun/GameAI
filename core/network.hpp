@@ -1,8 +1,7 @@
-// 读取配置文件，定义模型结构和预处理函数
+// 定义模型结构和预处理函数
 #pragma once
 #include <torch/torch.h>
 #include "json5cpp.h"
-#include "game.h"
 #include <fstream>
 #include <iostream>
 

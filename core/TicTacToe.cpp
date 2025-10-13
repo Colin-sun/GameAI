@@ -94,7 +94,7 @@ int UltimateTicTacToe::get_winner() const {
             return board[i][0];
         }
         // 检查列
-        if (board[0][i] != 0 && board[0][i] == board[1][i] && board[1][i] == board[2][2]) {
+        if (board[0][i] != 0 && board[0][i] == board[1][i] && board[1][i] == board[2][i]) {
             return board[0][i];
         }
     }

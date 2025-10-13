@@ -35,23 +35,18 @@ bool MCTSNode::is_terminal() {
     return board.is_game_over();
 }
 // 评估函数
-// 参照原代码定义，0 为平局，负值为先手胜，正值为后手胜
+// 参照原代码定义，0 为平局，正值为 max_player 胜
 // 同时鼓励 ai在更少的步数内获胜
-float MCTSNode::evaluate(int max_player) {
+float MCTSNode::evaluate() {
     auto winner = board.get_winner();
     auto step = board.get_step();
-    if (winner == 0) {
-        return 0;
-    } else if (winner == 3 - max_player) {
-        return -(1 - step * 3e-4); // 鼓励更快获胜
-    } else if (winner == max_player) {
-        return 1 - step * 3e-4;
-    } else {
-        return 0 + step * 3e-4; // 鼓励更慢平局
-    }
+    int current = board.get_current_player();
+
+    if (winner == 0) return 0;
+    if (winner == current) return 1.0f - step * 1e-4f;
+    if (winner == 3) return 0 + step * 1e-4f;
+    return -1.0f + step * 1e-4f;
 }
-
-
 MCTS::MCTS(ValueCNN& model, const std::mt19937& rand_engine, const MCTSParams& mctsParams, bool is_train)
     : model(model),
     rand_engine(rand_engine),
@@ -61,7 +56,10 @@ MCTS::MCTS(ValueCNN& model, const std::mt19937& rand_engine, const MCTSParams& m
     is_train(is_train),
     update_strategy(mctsParams.update_strategy),
     train_simulation(mctsParams.train_simulation),
-    train_buff(mctsParams.train_buff) {
+    train_buff(mctsParams.train_buff),
+    visited_nodes()  // 显式初始化为空 vector
+{
+    // 构造函数体
 }
 
 // 创建一个节点
@@ -84,10 +82,10 @@ RunReturn MCTS::run(UltimateTicTacToe& root_board, bool return_root) {
         visited_nodes.push_back(root_node);
     }
     // 预分配空间，避免频繁扩容
-    // 一般 40 步内棋局结束
+    // 最少 40 步内棋局结束
+    // TODO： 将 reserve加入配置项
     std::vector<std::shared_ptr<MCTSNode>> search_path;
     search_path.reserve(50);
-    int max_player = root_board.get_current_player();
     for (int i = 0; i < train_simulation; ++i) {
         std::shared_ptr<MCTSNode> current_node = root_node;
         search_path.clear();
@@ -101,10 +99,10 @@ RunReturn MCTS::run(UltimateTicTacToe& root_board, bool return_root) {
         if (!current_node->is_terminal()) {
             expand_node(current_node);
         } else {
-            current_node->value = evaluate_node(current_node, max_player);
+            current_node->value = evaluate_node(current_node);
         }
 
-        float value = evaluate_node(current_node, max_player);
+        float value = evaluate_node(current_node);
 
         // 更新节点值
         for (auto it = search_path.rbegin(); it != search_path.rend(); ++it) {
@@ -241,9 +239,11 @@ void MCTS::expand_node(std::shared_ptr<MCTSNode> node) {
 
 // 使用原始评估函数评估节点
 // 逻辑：终局使用评估函数，非终局使用神经网络估值
-float MCTS::evaluate_node(std::shared_ptr<MCTSNode> node, int max_player) {
+float MCTS::evaluate_node(std::shared_ptr<MCTSNode> node) {
     if (node->is_terminal()) {
-        return node->evaluate(max_player);
+        float eval = node->evaluate();  // 返回真实胜负
+        node->value = eval;             // 回传
+        return eval;
     } else {
         return node->value;
     }
@@ -280,7 +280,6 @@ ResultsReturn MCTS::get_results(std::shared_ptr<MCTSNode> root_node,
     } else {
         // 训练模式逻辑
         auto root_evaluate_result = model->calc(board_to_tensor(root_node->board));
-        float root_value = root_evaluate_result.first;
         auto root_policy_tensor = root_evaluate_result.second;
         auto root_policy = root_policy_tensor.accessor<float, 2>();
 
@@ -319,9 +318,10 @@ ResultsReturn MCTS::get_results(std::shared_ptr<MCTSNode> root_node,
 
         // 重新分配概率
         float value_sum = 0;
-        for (int i = 0; i < visited_moves_nodes.size(); ++i) {
+        int total_visits = static_cast<int>(visited_moves_nodes.size());
+        for (int i = 0; i < total_visits; ++i) {
             float cnt = visited_moves_nodes[i].second->visit_count;
-            if (i + 1 < visited_moves_nodes.size()) {
+            if (i + 1 < total_visits) {
                 cnt -= visited_moves_nodes[i + 1].second->visit_count;
             }
             if (cnt == 0) {
@@ -353,9 +353,9 @@ ResultsReturn MCTS::get_results(std::shared_ptr<MCTSNode> root_node,
             }
         }
         if (return_total_visits) {
-            return std::make_tuple(root_value, probs, total_visits);
+            return std::make_tuple(value_sum, probs, total_visits);
         } else {
-            return std::make_pair(root_value, probs);
+            return std::make_pair(value_sum, probs);
         }
     }
 }
@@ -369,40 +369,132 @@ std::tuple<std::vector<torch::Tensor>, std::vector<torch::Tensor>,
     std::vector<float> values;
     std::vector<float> weights;
 
-    for (std::shared_ptr<MCTSNode> root : visited_nodes) {
+    for (std::shared_ptr<MCTSNode> root_node : visited_nodes) {
         int child_count = 0;
-        for (const auto& child_pair : root->children) {
+        for (const auto& child_pair : root_node->children) {
             if (child_pair.second.first != nullptr) {
                 child_count++;
             }
         }
 
-        if (!(child_count > 1 || root->visit_count >= train_simulation / 2)) {
+        if (!(child_count > 1 || root_node->visit_count >= train_simulation / 2)) {
             continue;
         }
 
-        // 获取结果
-        auto results = get_results(root, true, true);
-        if (std::holds_alternative<std::tuple<float, std::vector<std::vector<float>>, int>>(results)) {
-            auto& tuple_results = std::get<std::tuple<float, std::vector<std::vector<float>>, int>>(results);
-            float value_sum = std::get<0>(tuple_results);
-            auto& probs = std::get<1>(tuple_results);
-            int total_visits = std::get<2>(tuple_results);
-
-            // 向量转换
-            boards_tensor.push_back(board_to_tensor(root->board));
-            auto options = torch::TensorOptions().dtype(torch::kFloat32);
-            auto prob_tensor = torch::zeros({ BOARD_SIZE, BOARD_SIZE }, options);
-            for (int i = 0; i < BOARD_SIZE; i++) {
-                prob_tensor.slice(0, i, i + 1) = torch::from_blob(probs[i].data(), { BOARD_SIZE }, options).clone();
-            }
-            policies_tensor.push_back(prob_tensor);
-            values.push_back(value_sum);
-            auto weight_tmp = std::sqrt(static_cast<float>(total_visits) / train_simulation) * train_buff;
-            weights.push_back(weight_tmp);
-        } else {
-            throw std::runtime_error("Invalid results type.");
+        // 创建概率二维向量
+        std::vector<std::vector<float>> probs(BOARD_SIZE, std::vector<float>(BOARD_SIZE, 0));
+        // 统计总访问次数
+        int total_visits = 0;
+        for (const auto& child_pair : root_node->children) {
+            std::shared_ptr<MCTSNode> child = child_pair.second.first;
+            total_visits += (child != nullptr) ? child->visit_count : 0; // 只有被访问的子节点才会被创建
         }
+
+        auto board_tensor = board_to_tensor(root_node->board);
+        auto root_evaluate_result = model->calc(board_tensor);
+        auto root_policy_tensor = root_evaluate_result.second;
+        auto root_policy = root_policy_tensor.accessor<float, 2>();
+
+        // 策略归一化
+        float sum_vaild_prob = 1e-10f; // 避免除零，使用float字面量
+        auto valid_moves = root_node->board.get_valid_moves();
+        // 第一次遍历：计算有效概率之和
+        for (auto& move : valid_moves) {
+            int i = move.first, j = move.second;
+            sum_vaild_prob += root_policy[i][j];
+        }
+        // 第二次遍历：归一化处理
+        for (auto& move : valid_moves) {
+            int i = move.first, j = move.second;
+            probs[i][j] = root_policy[i][j] / sum_vaild_prob;
+        }
+
+        // 构建候选动作列表
+        float sum_visited_prob = 0;
+        // 包含 (<行,列>, 子节点指针)
+        std::vector<std::pair<std::pair<int, int>, std::shared_ptr<MCTSNode>>> visited_moves_nodes;
+        for (const auto& child_pair : root_node->children) {
+            std::shared_ptr<MCTSNode> child = child_pair.second.first;
+            // 收集所有被访问过的子节点
+            if (child != nullptr && child->visit_count != 0) {
+                float prob_value = probs[child_pair.first.first][child_pair.first.second];
+                sum_visited_prob += prob_value;
+                child->value = prob_value;
+                visited_moves_nodes.emplace_back(child_pair.first, child);
+                probs[child_pair.first.first][child_pair.first.second] = 0.0f;
+            }
+        }
+
+        // 按访问次数降序排序
+        std::sort(visited_moves_nodes.begin(), visited_moves_nodes.end(), [](const auto& a, const auto& b) {
+            return a.second->visit_count > b.second->visit_count;
+            });
+
+        // 重新分配概率
+        float value_sum = 0.0f;
+        int total_moves = static_cast<int>(visited_moves_nodes.size());
+        for (int i = 0; i < total_moves; ++i) {
+            float cnt = visited_moves_nodes[i].second->value;
+            // 去掉锐化逻辑，防止 Nan值
+
+            // if (i + 1 < total_moves) {
+            //     cnt -= visited_moves_nodes[i + 1].second->value;
+            // }
+            if (cnt == 0) {
+                continue; // 无效位置
+            }
+
+            // 在当前考虑的节点范围内选择估值最高的节点
+            float best_val = -1e9;
+            int best_move_index = i;
+            for (int j = 0; j <= i; ++j) {
+                float current_val = -visited_moves_nodes[j].second->val;
+                if (current_val > best_val) {
+                    best_val = current_val;
+                    best_move_index = j;
+                }
+            }
+            probs[visited_moves_nodes[best_move_index].first.first][visited_moves_nodes[best_move_index].first.second]
+                += cnt * (i + 1);
+            value_sum += best_val * cnt * (i + 1) / sum_visited_prob;
+        }
+
+        // 向量转换
+        boards_tensor.push_back(board_tensor);
+        auto options = torch::TensorOptions().dtype(torch::kFloat32);
+        auto prob_tensor = torch::zeros({ BOARD_SIZE, BOARD_SIZE }, options);
+        for (int i = 0; i < BOARD_SIZE; i++) {
+            prob_tensor.slice(0, i, i + 1) = torch::from_blob(probs[i].data(), { BOARD_SIZE }, options).clone();
+        }
+        policies_tensor.push_back(prob_tensor);
+        values.push_back(value_sum);
+        auto weight_tmp = std::sqrt(static_cast<float>(total_visits) / train_simulation) * train_buff;
+        weights.push_back(weight_tmp);
+        // TODO: Debug
+        // TODO: Policy Loss: -nan
+        bool prob_wrong = false;
+        // 如果 probs 中有负数，则 prob_wrong = true
+        for (int i = 0; i < BOARD_SIZE; i++) {
+            for (int j = 0; j < BOARD_SIZE; j++) {
+                if (probs[i][j] < 0) {
+                    prob_wrong = true;
+                }
+            }
+        }
+        // 如果prob_wrong 为 true，则打印 probs
+        if (prob_wrong) {
+            root_node->board.print_board();
+            std::cout << "Prob wrong" << std::endl;
+            // 打印 probs
+            for (int i = 0; i < BOARD_SIZE; i++) {
+                for (int j = 0; j < BOARD_SIZE; j++) {
+                    std::cout << probs[i][j] << " ";
+                }
+                std::cout << std::endl;
+            }
+        }
+        // std::cout << "Value:" << value_sum << std::endl;
+
     }
 
     return std::make_tuple(boards_tensor, policies_tensor, values, weights);

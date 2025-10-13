@@ -46,17 +46,17 @@ struct MCTSParams
 // MCTS类声明
 class MCTS {
 private:
+    ValueCNN model;
+    std::mt19937 rand_engine; // 添加噪声时使用
     // 探索性参数,详细定义见配置文件
     float c_puct;
     float puct2;
     float noise_sigma;
     bool is_train; // 是否为训练模式
-    ValueCNN model;
-    std::vector<std::shared_ptr<MCTSNode>> visited_nodes; // 存储访问过的节点(仅训练时使用)
-    std::mt19937 rand_engine; // 添加噪声时使用
-    int train_simulation; // MCTS搜索次数
     std::string update_strategy; // 节点值更新策略
+    int train_simulation; // MCTS搜索次数
     float train_buff; // 训练样本权重
+    std::vector<std::shared_ptr<MCTSNode>> visited_nodes; // 存储访问过的节点(仅训练时使用)
 
 public:
     MCTS(ValueCNN& model, const std::mt19937& rand_engine, const MCTSParams& mctsParams, bool is_train = true);
@@ -75,7 +75,7 @@ public:
     void expand_node(std::shared_ptr<MCTSNode> node);
 
     // 使用原始评估函数评估节点
-    float evaluate_node(std::shared_ptr<MCTSNode> node, int max_player);
+    float evaluate_node(std::shared_ptr<MCTSNode> node);
 
     /// @brief 从 MCTS节点中提取搜索结果
     /// @param root_node MCTS节点
@@ -116,9 +116,7 @@ public:
     // 调用board的终局判断方法
     bool is_terminal();
     // 原始评估函数
-    float evaluate(int max_player);
-    // 使用神经网络评估
-    float nn_evaluate(int max_player);
+    float evaluate();
 
 };
 

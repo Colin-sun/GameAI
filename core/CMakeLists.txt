@@ -1,11 +1,14 @@
-if(ENABLE_TRAIN OR ENABLE_TRAIN_TEST OR ENABLE_INFER)
-    set(CORE_SOURCES
-        game.cpp
-        network.cpp
-        mcts.cpp)
+if(ENABLE_TRAIN OR ENABLE_TRAIN_TEST OR ENABLE_INFER OR ENABLE_MCTS_PURE)
+    set(CORE_SOURCES)
 
-    if(ENABLE_INFER)
-        list(APPEND CORE_SOURCES minimax.cpp)
+    # 根据不同模式条件编译
+    if(ENABLE_MCTS_PURE)
+        # 编译 utt.cpp, MCTS目录下的TreeNode.cpp, mcts_pure.cpp
+        list(APPEND CORE_SOURCES
+            utt.cpp
+            MCTS/TreeNode.cpp
+        )
+        message(STATUS "Build Pure MCTS Core")
     endif()
 
     add_library(core STATIC ${CORE_SOURCES})
@@ -14,20 +17,20 @@ if(ENABLE_TRAIN OR ENABLE_TRAIN_TEST OR ENABLE_INFER)
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
         $<INSTALL_INTERFACE:include>)
 
-    # 根据不同模式定义预处理器宏
-    if(ENABLE_TRAIN)
-        target_compile_definitions(core PUBLIC TRAIN_MODE)
-        message(STATUS "Build UTT Core")
-    endif()
+    # 根据构建类型设置优化等级和调试选项
+    target_compile_options(core PUBLIC
+        $<$<CONFIG:Debug>:-g -Wall -Wextra -Wpedantic>
+        $<$<CONFIG:Release>:-O3 -DNDEBUG>
+    )
 
-    if(ENABLE_TRAIN_TEST)
-        target_compile_definitions(core PUBLIC TRAIN_TEST_MODE)
-        message(STATUS "Build TicTacToe Core")
-    endif()
-
-    if(ENABLE_INFER)
-        target_compile_definitions(core PUBLIC INFER_MODE)
-        message(STATUS "Build UTT & minimax Core")
+    # 根据构建类型输出不同消息
+    string(TOUPPER "${CMAKE_BUILD_TYPE}" BUILD_TYPE_UPPER)
+    if(BUILD_TYPE_UPPER STREQUAL "DEBUG")
+        message(STATUS "Building core library in Debug mode")
+    elseif(BUILD_TYPE_UPPER STREQUAL "RELEASE")
+        message(STATUS "Building core library in Release mode")
+    else()
+        message(WARNING "Unknown build type: ${CMAKE_BUILD_TYPE}")
     endif()
 
     # 让 core 自己依赖 torch 等，后续 train/infer 只要 link core 即可

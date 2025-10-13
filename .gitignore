@@ -1,5 +1,6 @@
 build/
 0919_UTT/
+0919_Test_model/
 libtorch/
 .vscode/
 .git

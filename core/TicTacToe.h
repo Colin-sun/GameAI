@@ -1,6 +1,5 @@
 // 井字棋测试代码
 #pragma once
-
 #include <vector>
 #include <utility>
 #include <random>
@@ -58,3 +57,4 @@ public:
 // 当前玩家指的是即将落子的一方
 // 这个函数和游戏逻辑强相关，所以放在这里
 torch::Tensor board_to_tensor(const UltimateTicTacToe& current_game);
+

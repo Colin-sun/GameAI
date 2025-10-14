@@ -1,5 +1,6 @@
 # AIGame
 基于 cpp 和 libtorch，制作不同算法的游戏 ai
+
 计划开发的游戏：[终极井字棋](https://game.hullqin.cn/jzq)，[璀璨宝石](https://game.hullqin.cn/ccbs)
 
 
@@ -67,7 +68,7 @@ cmake --build build -j
 ## 文件目录说明
 
 ```cpp
-// 带 // 的文件为目前启用的文件
+// 带 // 的文件为目前不使用的文件
 Games/UTT/
 ├── CMakeLists.txt
 ├── Readme.md

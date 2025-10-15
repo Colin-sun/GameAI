@@ -1,6 +1,6 @@
 // 实现游戏基本逻辑
 #pragma once
-#include <vector>
+#include <array>
 #include <utility>
 #include <random>
 #include <cstdint>
@@ -9,25 +9,32 @@
 // #include <torch/torch.h>
 #include "base_game.h"
 
-const int BOARD_SIZE = 9; // 棋盘边长
-const int META_BOARD_SIZE = 3; // 小棋盘个数：3x3
-const int STATE_NUM = 3; // 每个格子的状态数：0空，1X，2O
+constexpr int BOARD_SIZE = 9; // 棋盘边长
+constexpr int META_BOARD_SIZE = 3; // 小棋盘个数：3x3
+constexpr int STATE_NUM = 3; // 每个格子的状态数：0空，1X，2O
+constexpr int MAX_MOVES = BOARD_SIZE * BOARD_SIZE; // 最大有效动作数
 
-const int IN_CHANNELS = 6; // 输入通道数
+constexpr int IN_CHANNELS = 6; // 输入通道数
 
 // 创建容纳生成测试棋盘参数的结构体
 struct NewGameParameters {
-    std::vector<std::vector<int>> board;
+    std::array<std::array<int, BOARD_SIZE>, BOARD_SIZE> board;
     std::pair<int, int> next_board; // 下一步可下的小棋盘的位置，-1, -1表示任意位置可下
     // 其他参数可以自动获得
+};
+
+// 存储有效动作数的数组
+struct ActionList {
+    std::array<int, MAX_MOVES> moves;
+    int count = 0;                     // 实际有效个数
 };
 
 class UltimateTicTacToe : public GameBase<UltimateTicTacToe> {
 private:
     // 9x9棋盘，0表示空，1表示玩家X，2表示玩家O
-    std::vector<std::vector<int>> board;
+    std::array<std::array<int, BOARD_SIZE>, BOARD_SIZE> board;
     // 3x3小棋盘状态，0表示未完成，1表示X获胜，2表示O获胜，3表示平局
-    std::vector<std::vector<int>> meta_board;
+    std::array<std::array<int, META_BOARD_SIZE>, META_BOARD_SIZE> meta_board;
     // 当前应该下棋的小棋盘位置，(-1, -1)表示可以任意位置下棋
     std::pair<int, int> next_board;
     int current_player; // 1为 X，2为 O
@@ -35,9 +42,14 @@ private:
     int step;
 
     // 检查3x3棋盘状态：0未完成，1玩家X获胜，2玩家O获胜，3平局
-    int get_board_state(const std::vector<std::vector<int>>& board_3x3);
+    int get_board_state(const std::array<std::array<int, 3>, 3>& board_3x3);
     // 更新大棋盘状态
-    void update_meta_board();
+    void update_meta_board(int row, int col);
+    // 获取大棋盘状态
+    void get_meta_board_state();
+
+    // 获取大棋盘坐标对应的sub_board
+    std::array<std::array<int, 3>, 3> get_sub_board(int meta_row, int meta_col) const;
 
 public:
     // 默认构造空棋盘
@@ -61,8 +73,8 @@ public:
     // alpha-bata使用
     void undo_move(std::pair<int, int> move); // 撤销走子，只能撤销最近走的一步
     // 训练相关函数
-    const std::vector<std::vector<int>>& get_board() const; // 获取棋盘状态
-    const std::vector<std::vector<int>>& get_meta_board() const; // 获取子棋盘状态
+    const std::array<std::array<int, BOARD_SIZE>, BOARD_SIZE>& get_board() const; // 获取棋盘状态
+    const std::array<std::array<int, META_BOARD_SIZE>, META_BOARD_SIZE>& get_meta_board() const; // 获取子棋盘状态
     int get_step() const; // 获取当前步数
 
     // 展示函数

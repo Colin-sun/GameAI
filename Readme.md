@@ -18,10 +18,12 @@ AI MCTS 基于 libtorch 开发，目前尚未开发完成
 ```shell
 # 在 AIGame/Games/UTT 目录下
 rm -rf build/
-cmake -B build -DENABLE_MCTS_PURE=ON -DCMAKE_BUILD_TYPE=Release
+cmake -B build -DENABLE_MCTS_PURE=ON -DENABLE_BENCHMARK=ON -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
 # 开始人机对战
 ./build/humanplay/gameplay -config /root/Desktop/AIGame/humanplay/infer_config_mcts_pure.json5
+# 运行测试
+./build/benchmark/benchmark -config /root/Desktop/AIGame/Games/UTT/benchmark/infer_config_mcts_pure.json5
 ```
 
 下面是目前被弃用的编译脚本：

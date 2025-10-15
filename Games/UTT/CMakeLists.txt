@@ -19,6 +19,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # option(ENABLE_INFER "Build infer executable" OFF)
 # option(ENABLE_TRAIN_TEST "Build train_test executable" OFF)
 option(ENABLE_MCTS_PURE "Build pure MCTS AI executable" OFF)
+option(ENABLE_BENCHMARK "Build benchmark executable" OFF)
 
 # # 统一找库
 # set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/libtorch)
@@ -44,4 +45,7 @@ add_subdirectory(core)
 # 根据选项添加子目录
 if(ENABLE_MCTS_PURE)
   add_subdirectory(humanplay)
+endif()
+if(ENABLE_BENCHMARK)
+  add_subdirectory(benchmark)
 endif()

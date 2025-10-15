@@ -3,7 +3,7 @@
 using namespace std;
 
 // 检查3x3棋盘状态：0未完成，1玩家X获胜，2玩家O获胜，3平局
-int UltimateTicTacToe::get_board_state(const vector<vector<int>>& sub_board) {
+int UltimateTicTacToe::get_board_state(const std::array<std::array<int, 3>, 3>& sub_board) {
     // 检查行
     for (int i = 0; i < META_BOARD_SIZE; ++i) {
         if (sub_board[i][0] == sub_board[i][1] && sub_board[i][1] == sub_board[i][2] && sub_board[i][0] != 0) {
@@ -38,13 +38,13 @@ int UltimateTicTacToe::get_board_state(const vector<vector<int>>& sub_board) {
     return 3; // 平局
 }
 
-// 更新大棋盘状态
-void UltimateTicTacToe::update_meta_board() {
+// 获取大棋盘状态
+void UltimateTicTacToe::get_meta_board_state() {
     for (int i = 0; i < 3; ++i) {
         for (int j = 0; j < 3; ++j) {
             if (meta_board[i][j] == 0) { // 只检查未完成的小棋盘
                 // 提取3x3子棋盘
-                vector<vector<int>> sub_board(3, vector<int>(3));
+                std::array<std::array<int, 3>, 3> sub_board{};
                 for (int x = 0; x < 3; ++x) {
                     for (int y = 0; y < 3; ++y) {
                         sub_board[x][y] = board[i * 3 + x][j * 3 + y];
@@ -59,9 +59,36 @@ void UltimateTicTacToe::update_meta_board() {
     }
 }
 
+// 获取row, col 所属的大棋盘坐标
+std::pair<int, int> get_meta_board_coord(int row, int col) {
+    int sub_row = row / 3;
+    int sub_col = col / 3;
+    return make_pair(sub_row, sub_col);
+}
+// 获取大棋盘坐标对应的sub_board
+std::array<std::array<int, 3>, 3> UltimateTicTacToe::get_sub_board(int meta_row, int meta_col) const {
+    std::array<std::array<int, 3>, 3> sub_board{};
+    for (int x = 0; x < 3; ++x) {
+        for (int y = 0; y < 3; ++y) {
+            sub_board[x][y] = board[meta_row * 3 + x][meta_col * 3 + y];
+        }
+    }
+    return sub_board;
+}
+
+// 部分更新大棋盘状态
+void UltimateTicTacToe::update_meta_board(int row, int col) {
+    std::pair<int, int> coord = get_meta_board_coord(row, col);
+    std::array<std::array<int, 3>, 3> sub_board = get_sub_board(coord.first, coord.second);
+    int state = get_board_state(sub_board);
+    meta_board[coord.first][coord.second] = state;
+}
+
+
+
 UltimateTicTacToe::UltimateTicTacToe() {
-    this->board = vector<vector<int>>(BOARD_SIZE, vector<int>(BOARD_SIZE, 0));
-    this->meta_board = vector<vector<int>>(META_BOARD_SIZE, vector<int>(META_BOARD_SIZE, 0));
+    this->board = std::array<std::array<int, BOARD_SIZE>, BOARD_SIZE>{};
+    this->meta_board = std::array<std::array<int, META_BOARD_SIZE>, META_BOARD_SIZE>{};
     this->next_board = make_pair(-1, -1); // 初始化为无效位置
     this->current_player = 1; // 初始玩家为 X
     this->step = 0; // 初始步数为 0
@@ -70,7 +97,7 @@ UltimateTicTacToe::UltimateTicTacToe() {
 // 含参构造函数，用于从特定状态初始化游戏
 UltimateTicTacToe::UltimateTicTacToe(NewGameParameters& parameters) {
     this->board = parameters.board;
-    this->meta_board = vector<vector<int>>(3, vector<int>(3, 0));
+    this->meta_board = std::array<std::array<int, META_BOARD_SIZE>, META_BOARD_SIZE>{};
     this->next_board = parameters.next_board;
 
     int step = 0;
@@ -91,7 +118,7 @@ UltimateTicTacToe::UltimateTicTacToe(NewGameParameters& parameters) {
         this->current_player = 2;
     }
 
-    update_meta_board(); // 初始化时更新大棋盘状态
+    get_meta_board_state(); // 初始化时获取大棋盘状态
 }
 
 int UltimateTicTacToe::get_action_index(int row, int col) const {
@@ -182,7 +209,7 @@ bool UltimateTicTacToe::make_move(int action) {
     board[row][col] = current_player;
 
     // 更新大棋盘状态
-    update_meta_board();
+    update_meta_board(row, col);
 
     // 设置下一个玩家必须下的小棋盘
     int local_row = row % 3;
@@ -204,7 +231,8 @@ void UltimateTicTacToe::undo_move(std::pair<int, int> move) {
     int col = move.second;
     board[row][col] = 0;
     // 更新大棋盘状态
-    update_meta_board();
+    // TODO 使用 minimax后端这里可以优化
+    get_meta_board_state();
 
     // 设置下一个玩家必须下的小棋盘
     int local_row = row % 3;
@@ -268,11 +296,11 @@ std::shared_ptr<UltimateTicTacToe> UltimateTicTacToe::clone() const {
 
 // 模型训练用函数，获取当前局面状态相关参数
 // 获取棋盘状态
-const std::vector<std::vector<int>>& UltimateTicTacToe::get_board() const {
+const std::array<std::array<int, BOARD_SIZE>, BOARD_SIZE>& UltimateTicTacToe::get_board() const {
     return board;
 }
 // 获取子棋盘状态
-const std::vector<std::vector<int>>& UltimateTicTacToe::get_meta_board() const {
+const std::array<std::array<int, META_BOARD_SIZE>, META_BOARD_SIZE>& UltimateTicTacToe::get_meta_board() const {
     return meta_board;
 }
 // 获取当前步数

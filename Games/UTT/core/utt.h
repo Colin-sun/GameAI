@@ -31,13 +31,13 @@ struct ActionList {
 
 class UltimateTicTacToe : public GameBase<UltimateTicTacToe> {
 private:
-    // 9x9棋盘，0表示空，1表示玩家X，2表示玩家O
+    // 9x9棋盘，0表示空，1表示先手，2表示后手
     std::array<std::array<int, BOARD_SIZE>, BOARD_SIZE> board;
-    // 3x3小棋盘状态，0表示未完成，1表示X获胜，2表示O获胜，3表示平局
+    // 3x3小棋盘状态，0表示未完成，1表示先手获胜，2表示后手，3表示平局
     std::array<std::array<int, META_BOARD_SIZE>, META_BOARD_SIZE> meta_board;
     // 当前应该下棋的小棋盘位置，(-1, -1)表示可以任意位置下棋
     std::pair<int, int> next_board;
-    int current_player; // 1为 X，2为 O
+    int current_player; // 玩家名，1为先手（红色圆圈），2为后手（蓝叉）
     // 步数（评估函数使用）
     int step;
 

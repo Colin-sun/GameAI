@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".UTTHumanPlayerSelect">
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="?attr/colorPrimary"
+        app:title="人机对战"
+        app:titleTextColor="@color/white_text"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/textView"
+        android:layout_width="200dp"
+        android:layout_height="67dp"
+        android:layout_marginStart="106dp"
+        android:layout_marginTop="147dp"
+        android:layout_marginEnd="106dp"
+        android:layout_marginBottom="16dp"
+        android:gravity="center"
+        android:text="选择玩家"
+        android:textColor="#000000"
+        android:textSize="32sp"
+        app:layout_constraintBottom_toTopOf="@+id/chipAISecond"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/toolbar" />
+
+    <com.google.android.material.chip.Chip
+        android:id="@+id/chipAISecond"
+        android:layout_width="175dp"
+        android:layout_height="65dp"
+        android:layout_marginStart="118dp"
+        android:layout_marginEnd="118dp"
+        android:text="红方 (先手)"
+        android:textColor="@color/white_text"
+        android:textSize="20sp"
+        app:chipBackgroundColor="@color/purple_200_regular_button"
+        app:chipIconVisible="false"
+        app:chipStartPadding="30dp"
+        app:chipSurfaceColor="@color/purple_200_regular_button"
+        app:closeIconVisible="false"
+        app:layout_constraintBottom_toTopOf="@+id/chipAIFirst"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textView" />
+
+    <com.google.android.material.chip.Chip
+        android:id="@+id/chipAIFirst"
+        android:layout_width="175dp"
+        android:layout_height="65dp"
+        android:layout_marginStart="118dp"
+        android:layout_marginTop="7dp"
+        android:layout_marginEnd="118dp"
+        android:layout_marginBottom="468dp"
+        android:text="蓝方 (后手)"
+        android:textColor="@color/white_text"
+        android:textSize="20sp"
+        app:chipBackgroundColor="@color/purple_200_regular_button"
+        app:chipIconVisible="false"
+        app:chipStartPadding="30dp"
+        app:chipSurfaceColor="@color/purple_200_regular_button"
+        app:closeIconVisible="false"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/chipAISecond" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/buttonSetting"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="40dp"
+        android:layout_marginBottom="50dp"
+        android:clickable="true"
+        app:backgroundTint="@color/purple_500"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:maxImageSize="32dp"
+        app:srcCompat="@drawable/baseline_settings_24"
+        app:tint="#FFFFFF" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

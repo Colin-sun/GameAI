@@ -1,0 +1,37 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <com.aiprojects.gameai.PurpleCategory app:title="纯 MCTS AI设置"
+        app:iconSpaceReserved="false" >
+
+        <EditTextPreference
+            app:key="mcts_pure_n_playout"
+            app:title="MCTS 模拟次数"
+            app:useSimpleSummaryProvider="true"
+            app:defaultValue="2000"
+            android:digits="0123456789"
+            android:persistent="true"/>
+
+        <EditTextPreference
+            app:key="mcts_pure_c_puct"
+            app:title="c_puct (一般用户无需更改)"
+            app:useSimpleSummaryProvider="true"
+            app:defaultValue="0.8"
+            android:persistent="true"/>
+    </com.aiprojects.gameai.PurpleCategory>
+
+    <com.aiprojects.gameai.PurpleCategory app:title="关于"
+        app:iconSpaceReserved="false">
+        <Preference
+            app:key="version"
+            app:title="Version"
+            android:summary="@string/app_version_name"
+            app:useSimpleSummaryProvider="true"/>
+        <Preference
+            app:key="author"
+            app:title="作者"
+            app:summary="CFK"
+            app:useSimpleSummaryProvider="true"/>
+    </com.aiprojects.gameai.PurpleCategory>
+
+</PreferenceScreen>

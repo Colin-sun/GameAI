@@ -1,9 +1,0 @@
-// using JSON5 format   
-{
-    /// MCTS参数
-    "mcts": {
-        "c_puct": 0.8, // 计算主探索项
-        "n_playout": 3000, // MCTS搜索次数
-    },
-    "ai_player": 2, // AI执子方，1为先手，2为后手
-}

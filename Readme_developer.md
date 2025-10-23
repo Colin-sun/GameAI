@@ -39,6 +39,40 @@ cmake --build build -j
 ./build/benchmark/benchmark -config ./benchmark/benchmark_config.json5
 ```
 
+下面是目前被弃用的编译脚本：
+
+```shell
+# 编译 train 的 release 版本：
+cmake -B build -DENABLE_TRAIN=ON -DENABLE_INFER=OFF -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+cmake -B build -DENABLE_TRAIN=OFF -DENABLE_INFER=ON -DCMAKE_BUILD_TYPE=Release
+
+# 运行：
+cd build
+./build/train/train -config /root/Desktop/AIGame/train/train_config.json5
+./build/train/train -config <config_file>
+
+./build/infer/infer -config <config_file>
+./build/infer/infer -config /root/Desktop/AIGame/infer/test_config.json5
+
+# train编译流程：
+rm -rf build/
+cmake -B build -DENABLE_TRAIN=ON -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+./build/train/train -config /root/Desktop/AIGame/train/train_config.json5
+
+# 测试train编译流程：
+rm -rf build/
+cmake -B build -DENABLE_TRAIN_TEST=ON -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+./build/train/train_test -config /root/Desktop/AIGame/train/train_test_config.json5
+
+# 测试train编译流程：
+rm -rf build/
+cmake -B build -DENABLE_TRAIN_TEST=ON -DCMAKE_BUILD_TYPE=Debug
+cmake --build build -j
+./build/train/train_test -config /root/Desktop/AIGame/train/train_test_config.json5
+```
 
 ### 安卓程序
 
@@ -120,3 +154,10 @@ GameAI/ // 只显示正在使用中的文件
 ├── gradlew.bat
 └── settings.gradle.kts
 ```
+
+
+
+## 开发指南
+
+### 添加新游戏
+在项目中增加文件，实现 base_game.h 定义的接口和自己的 humanplay 逻辑和安卓界面，同时相应修改 cmake 编译文件即可，可以参考 utt.h 和 utt.cpp 的实现

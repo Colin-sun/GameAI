@@ -1,0 +1,76 @@
+cmake_minimum_required(VERSION 3.18)
+project(train)
+
+# 设置编译器
+set(CMAKE_C_COMPILER gcc-12)
+set(CMAKE_CXX_COMPILER g++-12)
+# set(CMAKE_CUDA_HOST_COMPILER g++-12)
+
+# 设置默认构建类型（如果没有指定，默认为 Release）
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
+
+# 设置 libtorch 路径
+set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} libtorch)
+include_directories("libtorch/include")
+
+# 设置 C++ 标准
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# 查找 libtorch 和 jsoncpp
+find_package(Torch REQUIRED)
+# 添加头文件搜索路径
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})  # 当前目录
+
+# 添加可执行文件
+add_executable(train train.cpp)
+
+# 静态库 game
+add_library(game STATIC game.cpp)
+target_include_directories(game PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
+add_library(network STATIC network.cpp)
+target_include_directories(network PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(network PRIVATE "${TORCH_LIBRARIES}")
+
+# 静态库 2：MCTS
+add_library(mcts STATIC mcts.cpp)
+target_include_directories(mcts PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(mcts PRIVATE "${TORCH_LIBRARIES}")
+
+# 链接库
+target_include_directories(train PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(train PRIVATE
+                    game
+                    mcts
+                    network
+                    "${TORCH_LIBRARIES}"
+                    /usr/lib/x86_64-linux-gnu/libjsoncpp.so)
+
+# 添加 OpenMP 支持
+find_package(OpenMP REQUIRED)
+target_link_libraries(train PRIVATE OpenMP::OpenMP_CXX)
+
+# 根据构建类型设置编译选项
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    # Debug 版本：启用调试信息，关闭优化
+    target_compile_options(train PRIVATE
+        -Wall
+        -Wextra
+        -g          # 生成调试信息，关闭优化
+    )
+    target_compile_definitions(train PRIVATE BUILD_TYPE_DEBUG)
+    message(STATUS "Building in Debug mode")
+elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+    # Release 版本：启用优化，关闭调试信息
+    target_compile_options(train PRIVATE
+        -Wall
+        -Wextra
+        -O3         # 最高优化级别
+    )
+    message(STATUS "Building in Release mode")
+else()
+    message(WARNING "Unknown build type: ${CMAKE_BUILD_TYPE}. Using default options.")
+endif()

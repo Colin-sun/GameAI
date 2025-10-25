@@ -1,7 +1,7 @@
 // mcts_pure_bridge.cpp
 // JNI Cpp侧接口
 #include <jni.h>
-#include <stdint.h>
+#include <cstdint>
 #include "MCTS/mcts_pure.h"
 #include "utt.h"
 
@@ -77,7 +77,7 @@ JNIEXPORT jlong
 JNICALL
 Java_com_aiprojects_gameai_NativeMCTSPure_nCreate(JNIEnv *, jclass, jint n_playout, jfloat c_puct) {
     std::random_device rd;
-    void* mctspure_cpp = new MCTSPure<UltimateTicTacToe>(n_playout, c_puct, std::mt19937(rd()));
+    void* mctspure_cpp = new MCTSPure<UltimateTicTacToe, ActionList>(n_playout, c_puct, std::mt19937(rd()));
     return reinterpret_cast<jlong>(mctspure_cpp);
 }
 }
@@ -87,7 +87,7 @@ extern "C" {
 JNIEXPORT jint
 JNICALL
 Java_com_aiprojects_gameai_NativeMCTSPure_nGetBestMoveIndex(JNIEnv *, jclass, jlong mctspure_ptr, jlong game_ptr) {
-    auto* mctspure = reinterpret_cast<MCTSPure<UltimateTicTacToe>*>(mctspure_ptr);
+    auto* mctspure = reinterpret_cast<MCTSPure<UltimateTicTacToe, ActionList>*>(mctspure_ptr);
     auto* current_game = reinterpret_cast<UltimateTicTacToe*>(game_ptr);
     return mctspure->get_move(*current_game);
 }
@@ -98,7 +98,7 @@ extern "C" {
 JNIEXPORT void
 JNICALL
 Java_com_aiprojects_gameai_NativeMCTSPure_nDestroy(JNIEnv * , jclass, jlong mctspure_ptr ) {
-    delete reinterpret_cast <MCTSPure<UltimateTicTacToe>*> ( mctspure_ptr ) ;
+    delete reinterpret_cast <MCTSPure<UltimateTicTacToe, ActionList>*> ( mctspure_ptr ) ;
 }
 }
 

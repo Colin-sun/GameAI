@@ -32,6 +32,11 @@
             app:title="作者"
             app:summary="CFK"
             app:useSimpleSummaryProvider="true"/>
+        <Preference
+            app:key="auto_copy_link"
+            app:title="获取最新版"
+            app:summary="https://gitee.com/colin_31/GameAI"
+            app:useSimpleSummaryProvider="true"/>
     </com.aiprojects.gameai.PurpleCategory>
 
 </PreferenceScreen>

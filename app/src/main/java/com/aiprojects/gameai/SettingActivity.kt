@@ -1,5 +1,8 @@
 package com.aiprojects.gameai
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.widget.Toast
 import android.content.Context
 import android.graphics.Color
 import android.graphics.PorterDuff
@@ -24,6 +27,7 @@ import androidx.core.content.edit
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.preference.PreferenceManager
+import androidx.preference.Preference
 
 class SettingActivity : AppCompatActivity() {
 
@@ -165,6 +169,18 @@ class SettingActivity : AppCompatActivity() {
                     return@setOnPreferenceChangeListener false
                 }
                 // 范围内，系统默认落盘为 String
+                true
+            }
+
+            // 点击自动复制最新版链接并提示
+            val autoCopyLink = findPreference<Preference>("auto_copy_link")
+            autoCopyLink?.setOnPreferenceClickListener {
+                // 复制链接
+                val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                val clip = ClipData.newPlainText("label", "https://github.com/aiprojects/gameai")
+                clipboard.setPrimaryClip(clip)
+                // 弹窗提示
+                Toast.makeText(requireContext(), "已复制最新版链接", Toast.LENGTH_SHORT).show()
                 true
             }
         }

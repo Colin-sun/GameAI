@@ -13,7 +13,6 @@ import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
-import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -118,13 +117,6 @@ class UTTAIvsHuman : AppCompatActivity() {
         val mask = View(this).apply {
             isClickable = true                    // 必须 true 才能消费事件, 吃掉触摸
             setBackgroundColor(Color.TRANSPARENT) // 全透明
-            setOnClickListener {
-                Toast.makeText(
-                    this@UTTAIvsHuman,   // 换成你的 Activity 类名
-                    "AI正在思考中，点击屏幕无效",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
         }
 
         // 3. 计算 Toolbar 底沿到屏幕顶的距离
@@ -144,28 +136,27 @@ class UTTAIvsHuman : AppCompatActivity() {
         // 把 mask 存到 MASK_TAG，搜完再 removeView
         parent.setTag(R.id.mask_view_tag, mask)
 
-//        // TODO 修改DOM文字，提示 AI 正在搜索
-          // 直接执行JS脚本会导致不知道后面的应该显示什么文字
-//        webView.evaluateJavascript(
-//            """document.querySelector("#root > div > div > div.mx-4.mt-2.flex.items-center.justify-center > span").textContent = 'AI思考中……';""",
-//            null
-//        )
+        // 修改 Toolbar标题，提示 AI 正在搜索
+        toolbar.title = "AI思考中，点击屏幕无效"
     }
 
 
     private fun searchFinished(newUrl : String) {
-        // 显示结果 (直接覆盖加载界面)
-        webView.pushSpaRoute(newUrl)
-
-        // 移除 MASK_TAG
-        val decor = window.decorView as ViewGroup
-        decor.getTag(R.id.mask_view_tag)?.let { mask ->
-            (mask as View).also {
-                (it.parent as? ViewGroup)?.removeView(it) // 1. 摘掉
+        // 延迟恢复标题，避免闪
+        Handler(Looper.getMainLooper()).postDelayed({
+            val toolbar: Toolbar = findViewById(R.id.toolbar)
+            toolbar.title = "人机对战"
+            // 显示结果 (直接覆盖加载界面)
+            webView.pushSpaRoute(newUrl)
+            // 移除 MASK_TAG
+            val decor = window.decorView as ViewGroup
+            decor.getTag(R.id.mask_view_tag)?.let { mask ->
+                (mask as View).also {
+                    (it.parent as? ViewGroup)?.removeView(it) // 1. 摘掉
+                }
+                decor.setTag(R.id.mask_view_tag, null)       // 2. 清 tag
             }
-            decor.setTag(R.id.mask_view_tag, null)       // 2. 清 tag
-        }
-
+        }, 350)
     }
 
     private fun AIDoMove(currentGameUrl: String) = lifecycleScope.launch {
@@ -222,7 +213,37 @@ class UTTAIvsHuman : AppCompatActivity() {
                     return@post
                 }
 
+                // 获取当前游戏是否结束
+                val winner = getDoneWinnerUrl( url)
+                if (winner != 0){
+                    var titleText = ""
+                    when (winner) {
+                        AIPlayerNum -> {
+                            // AI获胜
+                            titleText = "游戏结束，AI获胜"
+                        }
+                        3 - AIPlayerNum -> {
+                            // 人获胜
+                            titleText = "游戏结束，玩家获胜"
+                        }
+                        -1 -> {
+                            // 平局
+                            titleText = "游戏结束，平局"
+                        }
+                    }
 
+                    AlertDialog.Builder(this@UTTAIvsHuman)
+                        .setTitle(titleText)
+                        .setMessage("游戏已结束，点击确认回到空盘")
+                        .setPositiveButton("确认") { _, _ ->
+                            webView.pushSpaRoute(uttStartURL)   // 用户点击后再跳转
+                        }
+                        .setCancelable(false)               // 返回键无效
+                        .create()
+                        .apply { setCanceledOnTouchOutside(false) } // 点外部无效
+                        .show()
+                    return@post
+                }
                 // 获取当前玩家
                 val target = url.substringAfterLast("p=")
                 val currentPlayer = target.length / 2 % 2 + 1

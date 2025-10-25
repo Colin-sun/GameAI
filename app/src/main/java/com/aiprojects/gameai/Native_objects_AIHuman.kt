@@ -32,6 +32,9 @@ class GamePtr private constructor(
     // 获取当前游戏状态的 url
     fun getUrl(): String = gameUrl
 
+    // 检查当前游戏是否结束：0未结束，1玩家X获胜，2玩家O获胜，-1平局
+    fun getDoneWinner(): Int = NativeUTT.nGetDoneWiner(ptr)
+
     // 把棋盘同步到 newUrl 描述的状态
     fun updateBoard(newUrl: String){
         // 如果传入的 url 和当前游戏状态 url 相同，则不更新（一次走子，onUrlChanged会被重复调用）
@@ -116,7 +119,6 @@ fun getBestMove(gameUrl: String, preferences: SharedPreferences) : String{
         // 根据 preferences，构造 MCTSPurePtr
         val nPlayout = preferences.getString("mcts_pure_n_playout", "2000")?.toIntOrNull() ?: 2000
         val cPuct = preferences.getString("mcts_pure_c_puct", "0.8")?.toFloatOrNull() ?: 0.8f
-
         MCTSPurePtr.create(nPlayout, cPuct).use { mctsPtr ->
             // MCTS 搜索
             val bestMove = mctsPtr.getBestMoveStr(gamePtr)
@@ -125,6 +127,14 @@ fun getBestMove(gameUrl: String, preferences: SharedPreferences) : String{
             // 获取当前游戏状态的 url
             gamePtr.getUrl() // 返回当前游戏状态的 url
         }
+    }
+}
+
+// 根据url获取游戏是否结束
+fun getDoneWinnerUrl(gameUrl: String): Int {
+    return GamePtr.create().use { gamePtr ->
+        gamePtr.updateBoard(gameUrl)
+        gamePtr.getDoneWinner()
     }
 }
 

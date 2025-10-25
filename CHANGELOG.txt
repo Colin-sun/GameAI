@@ -1,0 +1,11 @@
+10.25
+feat(setting): 添加自动复制项目链接功能
+- 在设置页面新增“获取最新版”选项- 点击后自动将项目链接复制到剪贴板
+
+refactor(core): 更新Native接口指针类型声明
+- 使用auto关键字替代显式类型转换
+
+feat(game): 
+- 通过修改Toolbar标题提示AI正在搜索，同时延迟恢复标题避免界面闪烁
+- 在 Kotlin 层新增 `getDoneWinner` 和 `getDoneWinnerUrl` 方法封装 native 调用
+- 游戏结束后弹窗提示结果（AI胜、玩家胜或平局），并提供返回初始状态按钮

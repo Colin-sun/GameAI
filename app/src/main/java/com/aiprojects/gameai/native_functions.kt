@@ -37,6 +37,9 @@ object NativeUTT {
 
     @JvmStatic
     external fun nDestroy(game_ptr: Long)
+
+    @JvmStatic
+    external fun nGetDoneWiner(game_ptr: Long): Int
 }
 
 /**

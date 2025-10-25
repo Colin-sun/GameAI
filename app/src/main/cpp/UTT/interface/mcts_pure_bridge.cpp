@@ -15,7 +15,6 @@ Java_com_aiprojects_gameai_NativeUTT_nCreate(JNIEnv* env, jclass, jintArray boar
                                                 jint nextBoardCol) {
     /* 1. 直接访问 Java 数组元素，无需拷贝 */
     jint* src = env->GetIntArrayElements(board_, nullptr);
-    jsize len = env->GetArrayLength(board_);
 
     /* 2. 还原二维棋盘 */
     std::array<std::array<int, BOARD_SIZE>, BOARD_SIZE> board{};
@@ -50,9 +49,17 @@ JNIEXPORT void
 JNICALL
 Java_com_aiprojects_gameai_NativeUTT_nMakeMove(JNIEnv*, jclass, jlong game_ptr, jint row,
                                                   jint col) {
-    UltimateTicTacToe* game = reinterpret_cast<UltimateTicTacToe*>(game_ptr);
+    auto* game = reinterpret_cast<UltimateTicTacToe*>(game_ptr);
     game->make_move(game->get_action_index(row, col));
 }
+}
+
+// 检查当前游戏是否结束：0未结束，1玩家X获胜，2玩家O获胜，-1平局
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_aiprojects_gameai_NativeUTT_nGetDoneWiner(JNIEnv *env, jclass clazz, jlong game_ptr) {
+    auto* game = reinterpret_cast<UltimateTicTacToe*>(game_ptr);
+    return game->get_done_winner().second;
 }
 
 // 销毁游戏状态对象
@@ -80,8 +87,8 @@ extern "C" {
 JNIEXPORT jint
 JNICALL
 Java_com_aiprojects_gameai_NativeMCTSPure_nGetBestMoveIndex(JNIEnv *, jclass, jlong mctspure_ptr, jlong game_ptr) {
-    MCTSPure<UltimateTicTacToe>* mctspure = reinterpret_cast<MCTSPure<UltimateTicTacToe>*>(mctspure_ptr);
-    UltimateTicTacToe* current_game = reinterpret_cast<UltimateTicTacToe*>(game_ptr);
+    auto* mctspure = reinterpret_cast<MCTSPure<UltimateTicTacToe>*>(mctspure_ptr);
+    auto* current_game = reinterpret_cast<UltimateTicTacToe*>(game_ptr);
     return mctspure->get_move(*current_game);
 }
 }
@@ -94,3 +101,4 @@ Java_com_aiprojects_gameai_NativeMCTSPure_nDestroy(JNIEnv * , jclass, jlong mcts
     delete reinterpret_cast <MCTSPure<UltimateTicTacToe>*> ( mctspure_ptr ) ;
 }
 }
+

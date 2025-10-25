@@ -57,7 +57,7 @@ Java_com_aiprojects_gameai_NativeUTT_nMakeMove(JNIEnv*, jclass, jlong game_ptr, 
 // 检查当前游戏是否结束：0未结束，1玩家X获胜，2玩家O获胜，-1平局
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_aiprojects_gameai_NativeUTT_nGetDoneWiner(JNIEnv *env, jclass clazz, jlong game_ptr) {
+Java_com_aiprojects_gameai_NativeUTT_nGetDoneWiner(JNIEnv *, jclass, jlong game_ptr) {
     auto* game = reinterpret_cast<UltimateTicTacToe*>(game_ptr);
     return game->get_done_winner().second;
 }

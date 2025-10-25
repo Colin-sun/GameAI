@@ -176,7 +176,7 @@ class SettingActivity : AppCompatActivity() {
             val autoCopyLink = findPreference<Preference>("auto_copy_link")
             autoCopyLink?.setOnPreferenceClickListener {
                 // 复制链接
-                val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                val clipboard = requireContext().getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
                 val clip = ClipData.newPlainText("label", "https://github.com/aiprojects/gameai")
                 clipboard.setPrimaryClip(clip)
                 // 弹窗提示

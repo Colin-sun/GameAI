@@ -14,6 +14,7 @@ option(ENABLE_MCTS_PURE "Build pure MCTS AI executable" OFF)
 option(ANDROID_BUILD "Build for android app" OFF)
 option(LINUX_BUILD "Build for linux" OFF)
 option(ENABLE_BENCHMARK "Build benchmark executable (linux ONLY)" OFF)
+option(ENABLE_TOOL "Build params decision tool (linux ONLY)" OFF)
 
 # 生成core静态库
 add_subdirectory(core)
@@ -33,5 +34,8 @@ elseif(LINUX_BUILD) # linux上运行
         add_subdirectory(humanplay)
         if(ENABLE_BENCHMARK)
                 add_subdirectory(benchmark)
+        endif()
+        if(ENABLE_TOOL)
+                add_subdirectory(tool)
         endif()
 endif()

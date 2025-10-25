@@ -7,7 +7,7 @@
 #include "MCTS/mcts_pure.h"
 #endif
 
-// #include "MCTS/mcts_pure.h" // develop use
+#include "MCTS/mcts_pure.h" // develop use
 
 #include <fstream>
 #include <iostream>
@@ -39,11 +39,11 @@ public:
     };
 
     // 根据参数获取 MCTSPure结构体
-    MCTSPure<UltimateTicTacToe> getMCTSPure() {
+    MCTSPure<UltimateTicTacToe, ActionList> getMCTSPure() {
         // 创建随机数生成器
         std::random_device rd;
         std::mt19937 rand_engine(rd());
-        return MCTSPure<UltimateTicTacToe>(
+        return MCTSPure<UltimateTicTacToe, ActionList>(
             config_json["mcts"]["n_playout"].asInt(),
             config_json["mcts"]["c_puct"].asFloat(),
             rand_engine
@@ -76,7 +76,7 @@ int main(int argc, char* argv[]) {
 
     // 创建初始棋盘和 MCTS对象
     UltimateTicTacToe board;
-    MCTSPure<UltimateTicTacToe> aiplayer = config.getMCTSPure();
+    auto aiplayer = config.getMCTSPure();
     std::cout << "初始化完成，开始测试\n";
 
     for (int time = 0; time < 10; time++) {

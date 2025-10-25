@@ -38,11 +38,11 @@ public:
     };
 
     // 根据参数获取 MCTSPure结构体
-    MCTSPure<UltimateTicTacToe> getMCTSPure() {
+    MCTSPure<UltimateTicTacToe, ActionList> getMCTSPure() {
         // 创建随机数生成器
         std::random_device rd;
         std::mt19937 rand_engine(rd());
-        return MCTSPure<UltimateTicTacToe>(
+        return MCTSPure<UltimateTicTacToe, ActionList>(
             config_json["mcts"]["n_playout"].asInt(),
             config_json["mcts"]["c_puct"].asFloat(),
             rand_engine
@@ -104,7 +104,7 @@ int main(int argc, char* argv[]) {
     UltimateTicTacToe board;
     // 设置AI执子方
     int ai_player = config.getAIPlayer();
-    MCTSPure<UltimateTicTacToe> aiplayer = config.getMCTSPure();
+    MCTSPure<UltimateTicTacToe, ActionList> aiplayer = config.getMCTSPure();
 
     std::cout << "初始化完成\n";
 

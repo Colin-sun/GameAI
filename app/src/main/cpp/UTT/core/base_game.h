@@ -7,12 +7,12 @@
 
 // Game class
 // All game should inherit from this class and implement all the functions
-template<typename Derived>
+template<typename Derived, typename ActionList>
 class GameBase {
 public:
     // get legal actions
     // action_index should be positive
-    virtual const std::vector<int> get_valid_actions() const = 0;
+    virtual const ActionList get_valid_actions() const = 0;
 
     // check if action is valid
     virtual bool is_action_valid(int action) const = 0;

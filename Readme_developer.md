@@ -28,15 +28,25 @@ cmake --build build -j
 ./build/humanplay/gameplay -config ./humanplay/humanplay_config.json5
 ```
 
-一并编译benckmark：
+一并编译benckmark和调参工具：
 
 ```shell
 # 在 GameAI/app/src/main/cpp/UTT 目录下
 rm -rf build/ # 可选
-cmake -B build -DLINUX_BUILD=ON -DENABLE_MCTS_PURE=ON -DENABLE_BENCHMARK=ON -DCMAKE_BUILD_TYPE=Release
+cmake -B build -DLINUX_BUILD=ON -DENABLE_MCTS_PURE=ON -DENABLE_TOOL=ON -DCMAKE_BUILD_TYPE=Release # 构建调参工具
+cmake -B build -DLINUX_BUILD=ON -DENABLE_MCTS_PURE=ON -DENABLE_BENCHMARK=ON -DCMAKE_BUILD_TYPE=Release # 构建benchmark
 cmake --build build -j
 # 运行 benchmark
 ./build/benchmark/benchmark -config ./benchmark/benchmark_config.json5
+# 运行自对弈
+./build/tool/self_play 1000 0.8 2000 0.8
+
+# 运行调参脚本
+cd tool
+uv venv
+uv pip install -r requirements.txt
+source .venv/bin/activate
+python decide_params.py
 ```
 
 下面是目前被弃用的编译脚本：
@@ -85,6 +95,8 @@ cmake --build build -j
 ![user_guide](./img/user_guide.jpg)
 
 ## 文件目录说明
+
+TODO 更新目录
 
 ```cpp
 GameAI/ // 只显示正在使用中的文件

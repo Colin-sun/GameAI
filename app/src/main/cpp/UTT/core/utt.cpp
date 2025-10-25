@@ -163,8 +163,8 @@ bool UltimateTicTacToe::is_action_valid(int action) const {
 }
 
 // 获取当前局面下所有有效移动
-const std::vector<int> UltimateTicTacToe::get_valid_actions() const {
-    vector<int> valid_actions;
+const ActionList UltimateTicTacToe::get_valid_actions() const {
+    ActionList valid_actions;
     // 如果指定了必须下的小棋盘
     if (next_board.first != -1 && next_board.second != -1) {
         int sub_row = next_board.first;
@@ -185,11 +185,14 @@ const std::vector<int> UltimateTicTacToe::get_valid_actions() const {
     }
 
     // 已完成则可以在任何未完成的小棋盘中下棋
-    for (int i = 0; i < BOARD_SIZE; ++i) {
-        for (int j = 0; j < BOARD_SIZE; ++j) {
-            int action = get_action_index(i, j);
-            if (is_action_valid(action)) {
-                valid_actions.emplace_back(action);
+    for (int row = 0; row < BOARD_SIZE; ++row) {
+        for (int col = 0; col < BOARD_SIZE; ++col) {
+            // 计算所属的小棋盘坐标
+            int sub_row = row / 3;
+            int sub_col = col / 3;
+            // 检查小棋盘是否已完成
+            if (meta_board[sub_row][sub_col] == 0 && board[row][col] == 0) {
+                valid_actions.emplace_back(get_action_index(row, col));
             }
         }
     }

@@ -25,11 +25,19 @@ struct NewGameParameters {
 
 // 存储有效动作数的数组
 struct ActionList {
-    std::array<int, MAX_MOVES> moves;
-    int count = 0;                     // 实际有效个数
+    int  data[MAX_MOVES];
+    int  count = 0;
+    int  size() const noexcept { return count; }
+    int& operator[](int i)       noexcept { return data[i]; }
+    int  operator[](int i) const noexcept { return data[i]; }
+    void emplace_back(int action_num) noexcept {
+        data[count] = action_num;
+        count++;
+    }
+
 };
 
-class UltimateTicTacToe : public GameBase<UltimateTicTacToe> {
+class UltimateTicTacToe : public GameBase<UltimateTicTacToe, ActionList> {
 private:
     // 9x9棋盘，0表示空，1表示先手，2表示后手
     std::array<std::array<int, BOARD_SIZE>, BOARD_SIZE> board;
@@ -62,7 +70,7 @@ public:
     std::pair<int, int> get_row_col(int action_index) const;
 
     // 实现所有纯虚函数
-    const std::vector<int> get_valid_actions() const override;
+    const ActionList get_valid_actions() const override;
     bool is_action_valid(int action) const override;
     bool make_move(int action) override;
     std::pair<bool, int> get_done_winner() const override;

@@ -4,16 +4,16 @@
 #include <random>
 #include <memory>
 
-template<typename Game>
+template<typename Game, typename ActionList>
 class MCTSPure {
     // An implementation of the Pure Monte Carlo Tree Search
-    static_assert(std::is_base_of_v<GameBase<Game>, Game>,
+    static_assert(std::is_base_of_v<GameBase<Game, ActionList>, Game>,
         "Template parameter 'Game' must inherit from 'GameBase' to make sure the interface is correct.");
 private:
     int _n_playout;
     double _c_puct;
     std::mt19937 rand_engine; // Random number generator engine, used to support multithreaded Generation
-    std::shared_ptr<TreeNode> _root;
+    std::shared_ptr<TreeNode<ActionList>> _root;
 public:
     // constructor
     // Inputs:
@@ -24,14 +24,14 @@ public:
     //      rand_engine: a random number generator engine.
     MCTSPure(int n_playout, float c_puct, const std::mt19937& rand_engine) :
         _n_playout(n_playout), _c_puct(c_puct), rand_engine(rand_engine) {
-        _root = std::make_shared<TreeNode>(nullptr, 1.0);
+        _root = std::make_shared<TreeNode<ActionList>>(nullptr, 1.0);
     }
 
     // Run a single playout from the root to the leaf, getting a value at
     // the leaf and propagating it back through its parents.
     // State is modified in - place, so a copy must be provided.
     void _playout(Game& state) {
-        std::shared_ptr<TreeNode> node = _root;
+        std::shared_ptr<TreeNode<ActionList>> node = _root;
         while (true) {
             if (node->is_leaf()) {
                 break;
@@ -112,14 +112,14 @@ public:
     //     about the subtree.
     void update_with_move(int last_move) {
         if (last_move == -1) {
-            _root = std::make_shared<TreeNode>(nullptr, 1.0);
+            _root = std::make_shared<TreeNode<ActionList>>(nullptr, 1.0);
             return;
         } else {
             if (_root->_children.find(last_move) != _root->_children.end()) {
                 _root = _root->_children[last_move];
                 _root->_parent = nullptr;
             } else {
-                _root = std::make_shared<TreeNode>(nullptr, 1.0);
+                _root = std::make_shared<TreeNode<ActionList>>(nullptr, 1.0);
             }
         }
     }

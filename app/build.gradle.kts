@@ -7,12 +7,22 @@ android {
     namespace = "com.aiprojects.gameai"
     compileSdk = 36
 
+    // 启用按 ABI 拆包
+    splits {
+        abi {
+            isEnable = true                    // 打开 split
+            reset()                            // 清空默认列表
+            include("arm64-v8a", "x86_64")     // 只打这两个
+            isUniversalApk = false             // 不要整包
+        }
+    }
+
     defaultConfig {
         applicationId = "com.aiprojects.gameai"
         minSdk = 28
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         externalNativeBuild {
@@ -27,13 +37,17 @@ android {
     }
 
     // 把 versionName 注入到字符串资源
+    // 根据 split-abi 分别重命名
     applicationVariants.all {
         resValue("string", "app_version_name", "\"${versionName}\"")
         val variant = this
         variant.outputs.all {
-            val fileName = "GameAI-arm64-${versionName}-${variant.buildType.name}.apk"
-            (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl)
-                .outputFileName = fileName
+            val abi = filters.find { it.identifier in setOf("arm64-v8a", "x86_64") }?.identifier
+            if (abi != null) {
+                val fileName = "GameAI-${abi}-${versionName}-${variant.buildType.name}.apk"
+                (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl)
+                    .outputFileName = fileName
+            }
         }
     }
 

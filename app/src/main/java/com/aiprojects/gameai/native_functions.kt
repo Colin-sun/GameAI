@@ -11,7 +11,7 @@ object NativeLib {
 }
 
 /**
- * 对应 cpp 中 UltimateTicTacToe 的三个函数
+ * 对应 cpp 中 UltimateTicTacToe 的函数
  */
 object NativeUTT {
     init {

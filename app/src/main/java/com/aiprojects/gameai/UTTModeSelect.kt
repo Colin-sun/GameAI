@@ -2,13 +2,12 @@ package com.aiprojects.gameai
 
 import android.content.Intent
 import android.graphics.Color
-import android.graphics.PorterDuff
 import android.os.Bundle
 import android.view.MenuItem
 import androidx.activity.enableEdgeToEdge
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.chip.Chip
@@ -25,7 +24,9 @@ class UTTModeSelect : AppCompatActivity() {
 
         // 把箭头刷成白色
         val whiteArrow = ContextCompat.getDrawable(this, R.drawable.baseline_arrow_back_24)
-        whiteArrow?.setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_ATOP)
+        whiteArrow?.let {
+            DrawableCompat.setTint(it, Color.WHITE)
+        }
         supportActionBar?.setHomeAsUpIndicator(whiteArrow)
 
         // 适配状态栏

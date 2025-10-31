@@ -24,6 +24,7 @@ import android.text.method.DigitsKeyListener
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.edit
+import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.preference.PreferenceManager
@@ -41,7 +42,9 @@ class SettingActivity : AppCompatActivity() {
 
         // 把箭头刷成白色
         val whiteArrow = ContextCompat.getDrawable(this, R.drawable.baseline_arrow_back_24)
-        whiteArrow?.setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_ATOP)
+        whiteArrow?.let {
+            DrawableCompat.setTint(it, Color.WHITE)
+        }
         supportActionBar?.setHomeAsUpIndicator(whiteArrow)
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->

@@ -5,7 +5,6 @@ import android.content.ClipboardManager
 import android.widget.Toast
 import android.content.Context
 import android.graphics.Color
-import android.graphics.PorterDuff
 import android.os.Bundle
 import android.util.AttributeSet
 import android.util.Log

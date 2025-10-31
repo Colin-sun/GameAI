@@ -15,3 +15,6 @@ refactor(core):
 - [NEW] 提升MCTS搜索性能
 - [NEW] 重构原生接口，增加获取当前玩家与最佳动作 ID 的 JNI 方法
 - [FIX] 使用auto关键字替代显式类型转换
+
+build(gradle): 
+- [NEW] 配置ABI拆分并更新版本号

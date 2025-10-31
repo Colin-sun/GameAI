@@ -62,6 +62,14 @@ Java_com_aiprojects_gameai_NativeUTT_nGetDoneWiner(JNIEnv *, jclass, jlong game_
     return game->get_done_winner().second;
 }
 
+// 获取当前玩家
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_aiprojects_gameai_NativeUTT_nGetCurrentPlayer(JNIEnv *, jclass, jlong game_ptr) {
+    auto* game = reinterpret_cast<UltimateTicTacToe*>(game_ptr);
+    return game->get_current_player();
+}
+
 // 销毁游戏状态对象
 extern "C" {
 JNIEXPORT void

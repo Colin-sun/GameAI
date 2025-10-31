@@ -11,9 +11,9 @@
         android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
         android:theme="@style/Theme.GameAI">
-<!--        <activity-->
-<!--            android:name=".UTTAISuggest"-->
-<!--            android:exported="false" />-->
+        <activity
+            android:name=".UTTAISuggest"
+            android:exported="false" />
         <activity
             android:name=".UTTAIvsHuman"
             android:exported="false" />

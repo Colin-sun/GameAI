@@ -40,6 +40,9 @@ object NativeUTT {
 
     @JvmStatic
     external fun nGetDoneWiner(game_ptr: Long): Int
+
+    @JvmStatic
+    external fun nGetCurrentPlayer(game_ptr: Long): Int
 }
 
 /**

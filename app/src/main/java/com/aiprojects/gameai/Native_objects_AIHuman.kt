@@ -2,11 +2,12 @@
 package com.aiprojects.gameai
 
 import android.content.SharedPreferences
+import android.util.Log
 import java.io.Closeable
 
-const val uttStartURL = "https://game.hullqin.cn/jzq?p=" // 空盘的URL
 
 // 实现 RAII, 把裸指针对装成可自动关闭的资源
+// 同时增加基于url的操作
 class GamePtr private constructor(
     private var ptr: Long,
     private var gameUrl: String = "https://game.hullqin.cn/jzq?p="
@@ -23,7 +24,7 @@ class GamePtr private constructor(
     fun get() = ptr
     fun makeMove(action: String){
         val col = action[0] - 'a'
-        val row = action[1] - '1'
+        val row = 8 - (action[1] - '1')
         // 更新gameUrl
         NativeUTT.nMakeMove(ptr, row, col)
         gameUrl = gameUrl + action
@@ -34,6 +35,9 @@ class GamePtr private constructor(
 
     // 检查当前游戏是否结束：0未结束，1玩家X获胜，2玩家O获胜，-1平局
     fun getDoneWinner(): Int = NativeUTT.nGetDoneWiner(ptr)
+
+    // 获取当前玩家
+    fun getCurrentPlayer(): Int = NativeUTT.nGetCurrentPlayer( ptr)
 
     // 把棋盘同步到 newUrl 描述的状态
     fun updateBoard(newUrl: String){
@@ -50,7 +54,7 @@ class GamePtr private constructor(
             // 每步固定 2 字符：字母+数字
             val action = target.substring(step, step + 2)
             val col = action[0] - 'a'
-            val row = action[1] - '1'
+            val row = 8 - (action[1] - '1')
             NativeUTT.nMakeMove(newPtr, row, col)
             step += 2
         }
@@ -93,7 +97,8 @@ class MCTSPurePtr private constructor(
     // 获取最佳动作对应的 url String 格式
     fun getBestMoveStr(gamePtr: GamePtr): String {
         val (row, col) = getBestMove(gamePtr)
-        val row_str = (row + 1).toString()
+        // row_str: 0~8 -> 9~1
+        val row_str = (8 - row + 1).toString()
         // col_str: 0~8 -> a~i
         val col_str = (col + 'a'.code).toChar().toString()
         return col_str + row_str
@@ -108,9 +113,9 @@ class MCTSPurePtr private constructor(
     }
 }
 
-// 获取最佳动作
+// 根据url获取最佳动作
 // 这里实时构造对象，开销较小，避免内存泄漏的同时也可以实现MCTS参数的动态调整
-fun getBestMove(gameUrl: String, preferences: SharedPreferences) : String{
+fun getBestMoveURL(gameUrl: String, preferences: SharedPreferences) : String{
     // 双层 use 确保资源被释放
     // TODO 用户退出时，会等运算完成后资源被释放
     return GamePtr.create().use { gamePtr ->
@@ -138,3 +143,21 @@ fun getDoneWinnerUrl(gameUrl: String): Int {
     }
 }
 
+// 根据url返回piece id 和当前玩家 id
+fun getBestMoveIDPlayer(gameUrl: String, preferences: SharedPreferences) : Pair<Int, Int>{
+    // 双层 use 确保资源被释放
+    // TODO 用户退出时，会等运算完成后资源被释放
+    return GamePtr.create().use { gamePtr ->
+        // 同步棋盘
+        gamePtr.updateBoard(gameUrl)
+        // 根据 preferences，构造 MCTSPurePtr
+        val nPlayout = preferences.getString("mcts_pure_n_playout", "2000")?.toIntOrNull() ?: 2000
+        val cPuct = preferences.getString("mcts_pure_c_puct", "0.8")?.toFloatOrNull() ?: 0.8f
+        MCTSPurePtr.create(nPlayout, cPuct).use { mctsPtr ->
+            // MCTS 搜索
+            val bestMove = mctsPtr.getBestMove(gamePtr)
+            // 返回最佳动作对应的 piece id 和当前玩家 id
+            Pair (((8 - bestMove.first) * 9 + bestMove.second), gamePtr.getCurrentPlayer())
+        }
+    }
+}

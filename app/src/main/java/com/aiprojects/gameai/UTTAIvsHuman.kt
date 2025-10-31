@@ -1,7 +1,6 @@
 package com.aiprojects.gameai
 
 import android.graphics.Color
-import android.graphics.PorterDuff
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -25,6 +24,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.appcompat.widget.Toolbar
+import androidx.core.graphics.drawable.DrawableCompat
+
+private const val uttGameStartURL = "https://game.hullqin.cn/jzq?p=" // 空盘的URL
 
 class UTTAIvsHuman : AppCompatActivity() {
     private lateinit var webView: WebView
@@ -48,7 +50,9 @@ class UTTAIvsHuman : AppCompatActivity() {
 
         // 把箭头刷成白色
         val whiteArrow = ContextCompat.getDrawable(this, R.drawable.baseline_arrow_back_24)
-        whiteArrow?.setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_ATOP)
+        whiteArrow?.let {
+            DrawableCompat.setTint(it, Color.WHITE)
+        }
         supportActionBar?.setHomeAsUpIndicator(whiteArrow)
 
         webView = findViewById(R.id.webView) // 获取WebView实例
@@ -71,7 +75,7 @@ class UTTAIvsHuman : AppCompatActivity() {
         webView.webViewClient = webClient
 
         // 加载空盘
-        webView.loadUrl(uttStartURL)
+        webView.loadUrl(uttGameStartURL)
     }
 
     // 让箭头能点
@@ -120,8 +124,8 @@ class UTTAIvsHuman : AppCompatActivity() {
         }
 
         // 3. 计算 Toolbar 底沿到屏幕顶的距离
-        val toolbar = findViewById<Toolbar>(R.id.toolbar)   // 换成你的 id
-        val toolbarBottom = toolbar.bottom                  // 如果 Toolbar 在 AppBarLayout 里，用 AppBarLayout 的 bottom 也行
+        val toolbar = findViewById<Toolbar>(R.id.toolbar)
+        val toolbarBottom = toolbar.bottom
 
         // 4. 把 mask 加到 Content 的父容器
         val parent = content.parent as ViewGroup
@@ -164,7 +168,7 @@ class UTTAIvsHuman : AppCompatActivity() {
         val newUrl = withContext(Dispatchers.IO) {   // 切到 IO 线程
             // 获取 MCTS 参数
             val preferences = PreferenceManager.getDefaultSharedPreferences(this@UTTAIvsHuman)
-            getBestMove(currentGameUrl, preferences)  // 耗时调用
+            getBestMoveURL(currentGameUrl, preferences)  // 耗时调用
         }
         searchFinished(newUrl)
     }
@@ -175,7 +179,6 @@ class UTTAIvsHuman : AppCompatActivity() {
         fun onUrlChanged(url: String) {
             //  ️该回调在 JS 线程，切回主线程再操作 UI
             Handler(Looper.getMainLooper()).post {
-                Log.d("SPA", "React 路由变了 → $url")
                 // 重复调用以及异常规则处理
                 if (url == currentGameUrl){
                     // 重复调用，不处理
@@ -190,7 +193,7 @@ class UTTAIvsHuman : AppCompatActivity() {
                         .setTitle("不支持的规则")
                         .setMessage("暂时不支持修改规则，将回到默认规则的空盘，点击确认继续")
                         .setPositiveButton("确认") { _, _ ->
-                            webView.pushSpaRoute(uttStartURL)   // 用户点击后再跳转
+                            webView.pushSpaRoute(uttGameStartURL)   // 用户点击后再跳转
                         }
                         .setCancelable(false)               // 返回键无效
                         .create()
@@ -198,13 +201,13 @@ class UTTAIvsHuman : AppCompatActivity() {
                         .show()
                     return@post
                 }
-                if (uttStartURL !in url){
+                if (uttGameStartURL !in url){
                     // 玩家进入其他页面，强制回到空盘
                     AlertDialog.Builder(this@UTTAIvsHuman)
                         .setTitle("界面异常")
                         .setMessage("当前界面异常，将回到默认规则的空盘，点击确认继续")
                         .setPositiveButton("确认") { _, _ ->
-                            webView.pushSpaRoute(uttStartURL)   // 用户点击后再跳转
+                            webView.pushSpaRoute(uttGameStartURL)   // 用户点击后再跳转
                         }
                         .setCancelable(false)               // 返回键无效
                         .create()
@@ -236,7 +239,7 @@ class UTTAIvsHuman : AppCompatActivity() {
                         .setTitle(titleText)
                         .setMessage("游戏已结束，点击确认回到空盘")
                         .setPositiveButton("确认") { _, _ ->
-                            webView.pushSpaRoute(uttStartURL)   // 用户点击后再跳转
+                            webView.pushSpaRoute(uttGameStartURL)   // 用户点击后再跳转
                         }
                         .setCancelable(false)               // 返回键无效
                         .create()
@@ -265,19 +268,19 @@ class UTTAIvsHuman : AppCompatActivity() {
 
         override fun onReceivedError(
             view: WebView?,
-            errorCode: Int,
-            description: String?,
-            failingUrl: String?
+            request: android.webkit.WebResourceRequest?,
+            error: android.webkit.WebResourceError?
         ) {
-            super.onReceivedError(view, errorCode, description, failingUrl)
-            Log.e("WebView", "加载错误 - 错误码: $errorCode, 描述: $description, URL: $failingUrl")
+            super.onReceivedError(view, request, error)
+            Log.e("WebView", "加载错误 - 错误码: ${error?.errorCode}, 描述: ${error?.description}, URL: ${request?.url}")
         }
+
     }
 }
 
 
 // 主动让 SPA 跳转到任意路由，不刷新整页
-fun WebView.pushSpaRoute(path: String) {
+private fun WebView.pushSpaRoute(path: String) {
     evaluateJavascript(
         """
             (function(){

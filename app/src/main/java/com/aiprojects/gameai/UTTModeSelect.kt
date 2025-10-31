@@ -52,14 +52,11 @@ class UTTModeSelect : AppCompatActivity() {
             startActivity(utt_player_intent)
         }
 
-        // TODO 弹窗告知用户未完成
+        // 跳转AI走子模式
         val buttonAISuggest = findViewById<Chip>(R.id.chipAISuggest)
         buttonAISuggest.setOnClickListener {
-            AlertDialog.Builder(this@UTTModeSelect)
-                .setTitle("还没做好呢~")
-                .setMessage("还没做好呢~")
-                .setPositiveButton("确认", null)
-                .show()
+            val utt_suggest_intent = Intent(this, UTTAISuggest::class.java)
+            startActivity(utt_suggest_intent)
         }
 
     }

@@ -1,11 +1,17 @@
-10.25
-feat(setting): 添加自动复制项目链接功能
-- 在设置页面新增“获取最新版”选项- 点击后自动将项目链接复制到剪贴板
+1.1.0
+feat(UTTAISuggest): 
+- [NEW] 新增 AI 建议显示功能，通过 SVG 元素克隆实现半透明提示棋子
 
-refactor(core): 更新Native接口指针类型声明
-- 使用auto关键字替代显式类型转换
+feat(UTTAIvsHuman): 
+- [NEW] 通过修改Toolbar标题提示AI正在搜索，同时延迟恢复标题避免界面闪烁
+- [NEW] 游戏结束后弹窗提示结果（AI胜、玩家胜或平局），并提供返回初始状态按钮
+- [FIX] 优化坐标转换逻辑，修复行号计算错误问题
+- [FIX] 移除过时的日志输出与调试注释，清理冗余代码结构
 
-feat(game): 
-- 通过修改Toolbar标题提示AI正在搜索，同时延迟恢复标题避免界面闪烁
-- 在 Kotlin 层新增 `getDoneWinner` 和 `getDoneWinnerUrl` 方法封装 native 调用
-- 游戏结束后弹窗提示结果（AI胜、玩家胜或平局），并提供返回初始状态按钮
+feat(setting): 
+- [NEW] 在设置页面新增“获取最新版”选项，点击后自动将项目链接复制到剪贴板
+
+refactor(core): 
+- [NEW] 提升MCTS搜索性能
+- [NEW] 重构原生接口，增加获取当前玩家与最佳动作 ID 的 JNI 方法
+- [FIX] 使用auto关键字替代显式类型转换

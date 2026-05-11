@@ -1,6 +1,7 @@
 #pragma once
 #include "TreeNode.h"
 #include "../base_game.h"
+#include <type_traits>
 #include <random>
 #include <memory>
 
@@ -75,6 +76,9 @@ public:
             int action = valid_moves[rand_engine() % valid_moves.size()];
             state.make_move(action);
         }
+        if (!end) {
+            return 0;
+        }
         if (winner == -1) { // tie
             return 0;
         } else {
@@ -102,10 +106,11 @@ public:
                 return a.second->_n_visits < b.second->_n_visits;
             }
         );
+        int best_move = best_child->first;
 
-        update_with_move(-1); // clear MCTS
+        update_with_move(best_move); // reuse the subtree for the chosen move
 
-        return best_child->first;
+        return best_move;
     }
 
     // Step forward in the tree, keeping everything we already know
@@ -117,7 +122,7 @@ public:
         } else {
             if (_root->_children.find(last_move) != _root->_children.end()) {
                 _root = _root->_children[last_move];
-                _root->_parent = nullptr;
+                _root->_parent.reset();
             } else {
                 _root = std::make_shared<TreeNode<ActionList>>(nullptr, 1.0);
             }

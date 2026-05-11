@@ -25,8 +25,13 @@
 #ifndef JSON5CPP_H
 #define JSON5CPP_H
 
-#include "/usr/include/jsoncpp/json/json.h"
- // 安装：sudo apt install libjsoncpp-dev
+#if __has_include(<json/json.h>)
+#include <json/json.h>
+#elif __has_include(<jsoncpp/json/json.h>)
+#include <jsoncpp/json/json.h>
+#else
+#error "jsoncpp headers not found"
+#endif
 #include <istream>
 #include <limits>
 #include <memory>

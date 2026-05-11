@@ -15,7 +15,7 @@ def win_rate(param1, param2):
     total = 16
 
     cmd = [
-        "../build/tool/self_play",
+        "../build/tools/self_play",
         str(int(n1)), str(float(c1)),
         str(int(n2)), str(float(c2)),
     ]

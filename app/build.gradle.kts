@@ -29,7 +29,7 @@ android {
             cmake {
                 abiFilters("arm64-v8a", "x86_64")
                 arguments("-DANDROID_STL=c++_shared",
-                        "-DANDROID_BUILD=ON ",
+                        "-DANDROID_BUILD=ON",
                         "-DENABLE_MCTS_PURE=ON",
                         "-DCMAKE_BUILD_TYPE=Release")
             }
@@ -69,7 +69,7 @@ android {
     }
     externalNativeBuild {
         cmake {
-            path = file("src/main/cpp/UTT/CMakeLists.txt")
+            path = file("src/main/cpp/CMakeLists.txt")
             version = "3.22.1"
         }
     }

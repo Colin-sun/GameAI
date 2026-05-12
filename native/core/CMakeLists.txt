@@ -1,6 +1,5 @@
 set(CORE_SOURCES
     utt.cpp
-    # MCTS/TreeNode.cpp
 )
 
 # 根据不同模式条件编译

@@ -32,11 +32,11 @@ cmake --build native/build -j
 `native/tools/decide_params.py` 需要额外的 Python 依赖，按 `native/tools/requirements.txt` 安装即可。
 
 ## 目录
-- `native/`: Linux 侧 C++ 核心、humanplay、benchmark、tools、train、infer。
+- `native/`: Linux 侧 C++ 核心、humanplay、benchmark、tools。
 - `app/src/main/cpp/`: Android JNI 入口，`android/mcts_pure_bridge.cpp` 连接原生 MCTS。
 - `configs/`: 各模块 JSON5 配置。
 - `img/`: README 图片资源。
 - `scripts/`: 预留的脚本目录。
 
 ## 说明
-`native/train/` 和 `native/infer/` 目前保留为实验性代码，不作为默认验证路径。Android 构建仍可在 Android Studio 中导入 `app/` 后运行。
+当前仓库仅保留 pure MCTS、benchmark、self-play 和 Android JNI 主线。Android 构建仍可在 Android Studio 中导入 `app/` 后运行。

@@ -5,7 +5,6 @@
 - `app/src/main/cpp/CMakeLists.txt`: Android JNI 入口，内部把 `native/` 作为子目录引入。
 - `native/core/`: 共用棋类逻辑、MCTS、网络和 JSON5 解析。
 - `native/humanplay/`、`native/benchmark/`、`native/tools/`: 当前主要验证路径。
-- `native/train/`、`native/infer/`: 实验性代码，未纳入默认回归。
 
 ## 推荐环境
 先进入 `gameai` conda 环境，再构建和测试：
@@ -35,4 +34,4 @@ python -m pip install -r native/tools/requirements.txt
 - Android 只维护 JNI 包装层，不在这里放 Linux 调试逻辑。
 
 ## 备注
-`native/train/` 和 `native/infer/` 仅保留历史/实验实现，如要恢复编译，需要单独补齐对应依赖和入口。
+当前仓库不再保留 `native/train/` 和 `native/infer/` 的源码入口。

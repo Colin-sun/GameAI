@@ -1,7 +1,7 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-This repository is an Android app with a native C++ game engine. The main app lives in `app/`, Android sources are under `app/src/main/`, the Android JNI wrapper lives under `app/src/main/cpp/android/`, and shared native logic lives in `native/`. Key native subfolders are `core/`, `humanplay/`, `benchmark/`, `tools/`, `train/`, and `infer/`. Shared CLI configs live in `configs/`, a root `scripts/` directory is reserved for future automation, and UI assets live in `app/src/main/res/`.
+This repository is an Android app with a native C++ game engine. The main app lives in `app/`, Android sources are under `app/src/main/`, the Android JNI wrapper lives under `app/src/main/cpp/android/`, and shared native logic lives in `native/`. Key native subfolders are `core/`, `humanplay/`, `benchmark/`, and `tools/`. Shared CLI configs live in `configs/`, a root `scripts/` directory is reserved for future automation, and UI assets live in `app/src/main/res/`.
 
 ## Build, Test, and Development Commands
 - `./gradlew assembleDebug`: build the Android app.

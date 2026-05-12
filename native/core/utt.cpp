@@ -306,6 +306,9 @@ const std::array<std::array<int, BOARD_SIZE>, BOARD_SIZE>& UltimateTicTacToe::ge
 const std::array<std::array<int, META_BOARD_SIZE>, META_BOARD_SIZE>& UltimateTicTacToe::get_meta_board() const {
     return meta_board;
 }
+std::pair<int, int> UltimateTicTacToe::get_next_board() const {
+    return next_board;
+}
 // 获取当前步数
 int UltimateTicTacToe::get_step() const {
     return step;

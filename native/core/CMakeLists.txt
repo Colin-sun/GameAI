@@ -8,6 +8,7 @@ if(ENABLE_MCTS_PURE)
 endif()
 
 add_library(core STATIC ${CORE_SOURCES})
+set_target_properties(core PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 target_include_directories(core PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>

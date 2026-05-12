@@ -16,17 +16,20 @@ option(ANDROID_BUILD "Build for android app" OFF)
 option(LINUX_BUILD "Build for linux" OFF)
 option(ENABLE_BENCHMARK "Build benchmark executable (linux ONLY)" OFF)
 option(ENABLE_TOOL "Build params decision tool (linux ONLY)" OFF)
+option(ENABLE_PYTHON_BINDINGS "Build Python bindings (linux ONLY)" OFF)
 
 add_subdirectory(core)
 
 if(LINUX_BUILD)
-    add_subdirectory(humanplay)
-
     if(ENABLE_BENCHMARK)
         add_subdirectory(benchmark)
     endif()
 
     if(ENABLE_TOOL)
         add_subdirectory(tools)
+    endif()
+
+    if(ENABLE_PYTHON_BINDINGS)
+        add_subdirectory(python)
     endif()
 endif()

@@ -83,6 +83,7 @@ public:
     // 训练相关函数
     const std::array<std::array<int, BOARD_SIZE>, BOARD_SIZE>& get_board() const; // 获取棋盘状态
     const std::array<std::array<int, META_BOARD_SIZE>, META_BOARD_SIZE>& get_meta_board() const; // 获取子棋盘状态
+    std::pair<int, int> get_next_board() const; // 获取下一步限定的小棋盘
     int get_step() const; // 获取当前步数
 
     // 展示函数

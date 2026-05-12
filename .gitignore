@@ -1,5 +1,9 @@
 /agent_files/
 
+__pycache__
+*.egg-info
+gameai_native*.so
+gameai_native*.pyd
 
 *.iml
 .gradle

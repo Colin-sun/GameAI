@@ -8,7 +8,7 @@
 #include <utility>
 #include <vector>
 
-#include "MCTS/mcts_pure.h"
+#include "mcts_pure.h"
 #include "utt.h"
 
 namespace py = pybind11;

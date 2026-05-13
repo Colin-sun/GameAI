@@ -2,7 +2,7 @@
 // JNI Cpp侧接口
 #include <jni.h>
 #include <cstdint>
-#include "MCTS/mcts_pure.h"
+#include "mcts_pure.h"
 #include "utt.h"
 
 // 创建游戏状态对象

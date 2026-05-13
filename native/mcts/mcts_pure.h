@@ -1,6 +1,6 @@
 #pragma once
 #include "TreeNode.h"
-#include "../base_game.h"
+#include "../games/base_game.h"
 #include <type_traits>
 #include <random>
 #include <memory>

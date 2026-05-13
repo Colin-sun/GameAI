@@ -1,39 +1,18 @@
 #!/usr/bin/env python3
 # 调参代码
+from __future__ import annotations
+
 import argparse
-import sys
-from pathlib import Path
 
 import optuna
 
-
-def load_native_module():
-    try:
-        import gameai_native  # pylint: disable=import-error
-
-        return gameai_native
-    except ModuleNotFoundError:
-        pass
-
-    repo_root = Path(__file__).resolve().parents[2]
-    module_dir = repo_root / "build" / "native" / "python"
-    if module_dir.exists():
-        sys.path.insert(0, str(module_dir))
-        import gameai_native  # pylint: disable=import-error
-
-        return gameai_native
-
-    raise ModuleNotFoundError(
-        "gameai_native is unavailable. Run `python -m pip install .` "
-        "or build the Python bindings with CMake."
-    )
+from common import load_native_module
 
 
 GAMEAI_NATIVE = load_native_module()
 DEFAULT_BASELINE = (6994, 0.62042)
 
 
-# ---------- 2. 14 盘双循环 ----------
 def win_rate(param1, param2, games_per_side=8, seed=20260512):
     """
     返回 [参数1胜率, 参数2胜率]，维度 2
@@ -51,7 +30,7 @@ def win_rate(param1, param2, games_per_side=8, seed=20260512):
     total = score1 + score2
     return (score1 / total, score2 / total)
 
-# ---------- 3. Optuna 目标函数 ----------
+
 def build_objective(baseline, games_per_side, seed):
     def objective(trial: optuna.Trial):
         n = trial.suggest_int("n_playout", 200, 8000, log=True)
@@ -77,7 +56,7 @@ def parse_args():
     parser.add_argument("--seed", type=int, default=20260512, help="Base seed for self-play evaluation.")
     return parser.parse_args()
 
-# ---------- 4. 启动调参 ----------
+
 def main():
     args = parse_args()
     baseline = (args.baseline_n_playout, args.baseline_c_puct)
@@ -92,9 +71,9 @@ def main():
     )
 
     print("Best trial:")
-    t = study.best_trial
-    print(" value =", t.value)
-    print(" params =", t.params)
+    best_trial = study.best_trial
+    print(" value =", best_trial.value)
+    print(" params =", best_trial.params)
 
 
 if __name__ == "__main__":

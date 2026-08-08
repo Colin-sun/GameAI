@@ -4,9 +4,7 @@
 This repository is an Android app with a native C++ game engine. The main app lives in `app/`, Android sources are under `app/src/main/`, the Android JNI wrapper lives under `app/src/main/cpp/android/`, and shared native logic lives in `native/`. Key native subfolders are `core/` and `python/`. Shared CLI configs live in `configs/`, Python entry scripts live in `scripts/`, and UI assets live in `app/src/main/res/`.
 
 ## Build, Test, and Development Commands
-- `./gradlew assembleDebug`: build the Android app.
-- `./gradlew test`: run JVM unit tests if present.
-- `./gradlew connectedAndroidTest`: run instrumentation tests on a device/emulator; use only when Android changes need validation.
+- By default, only run python & cpp test and do not modify Kotlin and java code
 - `python -m pip install .`: install Python dependencies and build the `gameai_native` binding for Python tools.
 - `cmake -S native -B build/native -DLINUX_BUILD=ON -DENABLE_MCTS_PURE=ON -DENABLE_PYTHON_BINDINGS=ON -DCMAKE_BUILD_TYPE=Release` then `cmake --build build/native -j`: build the native C++ core plus Python bindings from `native/`, with all artifacts kept under the repo-root `build/`.
 - `python scripts/decide_params.py --trials 10 --games-per-side 2`: run Optuna-based MCTS tuning through the Python bindings.

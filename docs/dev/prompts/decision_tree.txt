@@ -1,0 +1,1 @@
+设计下使用 frontend-design skill 修改 humanplay.py 去掉现在的终端文字形式，使其支持在网页上点击棋盘的对应位置走子，同时可以在单独界面查看 MCTS AI 每步走子时的决策树的方案

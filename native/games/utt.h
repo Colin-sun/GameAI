@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <iostream>
 #include <array>
+#include <cmath>
 // #include <torch/torch.h>
 #include "base_game.h"
 
@@ -45,12 +46,14 @@ private:
     std::array<std::array<int, META_BOARD_SIZE>, META_BOARD_SIZE> meta_board;
     // 当前应该下棋的小棋盘位置，(-1, -1)表示可以任意位置下棋
     std::pair<int, int> next_board;
+    // 仅用于撤销最近一步时恢复上一局面的落子限制。
+    std::pair<int, int> previous_next_board;
     int current_player; // 玩家名，1为先手（红色圆圈），2为后手（蓝叉）
     // 步数（评估函数使用）
     int step;
 
     // 检查3x3棋盘状态：0未完成，1玩家X获胜，2玩家O获胜，3平局
-    int get_board_state(const std::array<std::array<int, 3>, 3>& board_3x3);
+    int get_board_state(const std::array<std::array<int, 3>, 3>& board_3x3) const;
     // 更新大棋盘状态
     void update_meta_board(int row, int col);
     // 获取大棋盘状态
@@ -58,6 +61,9 @@ private:
 
     // 获取大棋盘坐标对应的sub_board
     std::array<std::array<int, 3>, 3> get_sub_board(int meta_row, int meta_col) const;
+
+    bool completes_local_board(int action, int player) const;
+    bool wins_game_with_action(int action, int player) const;
 
 public:
     // 默认构造空棋盘
@@ -76,6 +82,11 @@ public:
     std::pair<bool, int> get_done_winner() const override;
     int get_current_player() const override;
     std::shared_ptr<UltimateTicTacToe> clone() const override;
+    int select_rollout_action(
+        const ActionList& actions,
+        std::mt19937& rand_engine,
+        int rollout_policy) const override;
+    float evaluate(int player) const override;
     // std::tuple<std::vector<int>, std::vector<float>, float> policy_value_fn() const override;
 
     // alpha-bata使用

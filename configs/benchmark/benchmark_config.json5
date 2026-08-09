@@ -2,7 +2,9 @@
 {
     /// MCTS参数
     "mcts": {
-        "c_puct": 0.8, // 计算主探索项
+        "c_puct": 0.3, // 计算主探索项
         "n_playout": 3000, // MCTS搜索次数
+        "rollout_policy": "tactical", // uniform 或 tactical
+        "rollout_limit": 32, // 非终局启发式截断步数
     }
 }

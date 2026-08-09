@@ -12,19 +12,24 @@ def repo_root() -> Path:
 
 
 def load_native_module():
+    # Prefer the repository build so scripts exercise the current native
+    # sources instead of an older globally installed extension.
+    module_dir = repo_root() / "build" / "native" / "python"
+    if module_dir.exists():
+        sys.path.insert(0, str(module_dir))
+        try:
+            import gameai_native  # pylint: disable=import-error
+
+            return gameai_native
+        except ModuleNotFoundError:
+            sys.path.pop(0)
+
     try:
         import gameai_native  # pylint: disable=import-error
 
         return gameai_native
     except ModuleNotFoundError:
         pass
-
-    module_dir = repo_root() / "build" / "native" / "python"
-    if module_dir.exists():
-        sys.path.insert(0, str(module_dir))
-        import gameai_native  # pylint: disable=import-error
-
-        return gameai_native
 
     raise ModuleNotFoundError(
         "gameai_native is unavailable. Run `python -m pip install .` "

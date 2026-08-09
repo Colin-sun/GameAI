@@ -1,0 +1,1 @@
+分析下现在应该如何现在AI的棋力？将棋力提升的方案分析 & 棋力提升的评估通用流程中文写入 /GameAI/docs/dev/analysis/performance_improve.md 中

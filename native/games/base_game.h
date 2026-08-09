@@ -4,6 +4,7 @@
 #include <functional>
 #include <unordered_map>
 #include <memory>
+#include <random>
 
 // Game class
 // All game should inherit from this class and implement all the functions
@@ -30,6 +31,24 @@ public:
 
     // return a deep copy of the game
     virtual std::shared_ptr<Derived> clone() const = 0;
+
+    // Select an action for a rollout. Games can override this to add a
+    // domain-specific policy while keeping uniform random play as default.
+    virtual int select_rollout_action(
+        const ActionList& actions,
+        std::mt19937& rand_engine,
+        int rollout_policy) const {
+        (void)rollout_policy;
+        std::uniform_int_distribution<int> distribution(0, actions.size() - 1);
+        return actions[distribution(rand_engine)];
+    }
+
+    // Return a value from the requested player's perspective for a
+    // non-terminal rollout cutoff. The default keeps generic games neutral.
+    virtual float evaluate(int player) const {
+        (void)player;
+        return 0.0f;
+    }
 
     // // function that returns the value of the game and the policy
     // // Output: vector<vaild_action_index, action_probs, value_of_current_game>

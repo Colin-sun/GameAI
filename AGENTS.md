@@ -23,3 +23,11 @@ The visible history does not show a strong commit-message convention, so use sho
 
 ## Agent-Specific Instructions
 Do not modify generated build outputs or local environment files. When testing is needed, prefer the native and Python paths first and keep Android checks as a last resort.
+
+## Game Rule Constraint
+The default Ultimate Tic Tac Toe rule in this repository is meta-board majority, not a meta-board three-in-a-row rule:
+
+- Each local 3x3 board is resolved by its own three-in-a-row or local draw.
+- The player with more won local boards wins the meta game. Drawn local boards do not count toward the majority threshold, and a player may win early once an opponent can no longer catch up.
+- If every local board is resolved before either player has a strict majority, the player with more won local boards wins; equal counts are a draw.
+- Do not add or restore meta-board line detection in `get_done_winner()`, tactical rollout decisions, evaluation heuristics, tests, or evaluation documents unless the user explicitly requests a rules change.

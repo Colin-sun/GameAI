@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <stdexcept>
 
 struct SearchTreeNodeSnapshot {
     int id = -1;
@@ -36,6 +37,8 @@ private:
     int _n_playout;
     double _c_puct;
     bool _capture_search_tree;
+    int _rollout_policy;
+    int _rollout_limit;
     std::mt19937 rand_engine; // Random number generator engine, used to support multithreaded Generation
     std::shared_ptr<TreeNode<ActionList>> _root;
     SearchTreeSnapshot _last_search_tree;
@@ -133,11 +136,27 @@ public:
         int n_playout,
         float c_puct,
         const std::mt19937& rand_engine,
-        bool capture_search_tree = false) :
+        bool capture_search_tree = false,
+        int rollout_policy = 1,
+        int rollout_limit = 32) :
         _n_playout(n_playout),
         _c_puct(c_puct),
         _capture_search_tree(capture_search_tree),
+        _rollout_policy(rollout_policy),
+        _rollout_limit(rollout_limit),
         rand_engine(rand_engine) {
+        if (_n_playout <= 0) {
+            throw std::invalid_argument("n_playout must be positive");
+        }
+        if (_c_puct <= 0.0) {
+            throw std::invalid_argument("c_puct must be positive");
+        }
+        if (_rollout_policy < 0 || _rollout_policy > 1) {
+            throw std::invalid_argument("rollout_policy must be 0 or 1");
+        }
+        if (_rollout_limit <= 0) {
+            throw std::invalid_argument("rollout_limit must be positive");
+        }
         _root = std::make_shared<TreeNode<ActionList>>(nullptr, 1.0);
     }
 
@@ -164,7 +183,7 @@ public:
         if (!end) {
             node->expand(state.get_valid_actions());
         }
-        // Evaluate the leaf node by random rollout
+        // Evaluate the leaf node with the configured rollout policy.
         float leaf_value = _evaluate_rollout(state);
         // Update value and visit count of nodes in this traversal.
         node->update_recursive(-leaf_value);
@@ -173,36 +192,44 @@ public:
     // Use the rollout policy to play until the end of the game,
     // returning + 1 if the current player wins, -1 if the opponent wins,
     // and 0 if it is a tie.
-    int _evaluate_rollout(Game& state, int limit = 300) {
+    float _evaluate_rollout(Game& state) {
         int player = state.get_current_player();
-        bool end = false;
-        int winner = -1;
-        for (int i = 0; i < limit; ++i) {
+        for (int i = 0; i < _rollout_limit; ++i) {
             auto game_end_result = state.get_done_winner();
-            end = game_end_result.first;
-            winner = game_end_result.second;
-            if (end) {
-                break;
+            if (game_end_result.first) {
+                if (game_end_result.second == -1) {
+                    return 0.0f;
+                }
+                return (game_end_result.second == player) ? 1.0f : -1.0f;
             }
             auto valid_moves = state.get_valid_actions();
-            // use rand_engine to randomly select an action
-            int action = valid_moves[rand_engine() % valid_moves.size()];
-            state.make_move(action);
+            if (valid_moves.size() == 0) {
+                throw std::runtime_error("Non-terminal game has no valid rollout move");
+            }
+            int action = state.select_rollout_action(valid_moves, rand_engine, _rollout_policy);
+            if (!state.make_move(action)) {
+                throw std::runtime_error("Rollout selected an invalid move");
+            }
         }
-        if (!end) {
-            return 0;
+
+        auto game_end_result = state.get_done_winner();
+        if (game_end_result.first) {
+            if (game_end_result.second == -1) {
+                return 0.0f;
+            }
+            return (game_end_result.second == player) ? 1.0f : -1.0f;
         }
-        if (winner == -1) { // tie
-            return 0;
-        } else {
-            return (winner == player) ? 1 : -1;
-        }
+        return std::clamp(state.evaluate(player), -1.0f, 1.0f);
     }
 
     // Runs all playouts sequentially and returns the most visited action.
     //     state: the current game state
     //     Return : the selected action index
     int get_move(Game& state) {
+        if (state.get_done_winner().first || state.get_valid_actions().size() == 0) {
+            return -1;
+        }
+
         for (int n = 0; n < _n_playout; ++n) {
             Game state_copy = *(state.clone());
             _playout(state_copy);
@@ -221,7 +248,10 @@ public:
             _root->_children.begin(),
             _root->_children.end(),
             [](const auto& a, const auto& b) {
-                return a.second->_n_visits < b.second->_n_visits;
+                if (a.second->_n_visits != b.second->_n_visits) {
+                    return a.second->_n_visits < b.second->_n_visits;
+                }
+                return a.first > b.first;
             }
         );
         int best_move = best_child->first;

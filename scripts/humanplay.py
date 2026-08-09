@@ -89,6 +89,12 @@ def add_runtime_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--ai-player", type=int, choices=(1, 2), help="Override config AI side.")
     parser.add_argument("--n-playout", type=int, help="Override config MCTS playout count.")
     parser.add_argument("--c-puct", type=float, help="Override config exploration constant.")
+    parser.add_argument(
+        "--rollout-policy",
+        choices=("uniform", "tactical"),
+        help="Override the rollout policy.",
+    )
+    parser.add_argument("--rollout-limit", type=int, help="Override rollout cutoff length.")
     parser.add_argument("--seed", type=int, default=20260512, help="Seed for the persistent AI tree.")
     parser.add_argument("--host", default="127.0.0.1", help="HTTP bind host.")
     parser.add_argument("--port", type=int, default=8765, help="HTTP bind port.")
@@ -139,6 +145,10 @@ def merge_runtime_config(args: argparse.Namespace) -> dict:
         mcts_cfg["n_playout"] = args.n_playout
     if args.c_puct is not None:
         mcts_cfg["c_puct"] = args.c_puct
+    if args.rollout_policy is not None:
+        mcts_cfg["rollout_policy"] = args.rollout_policy
+    if args.rollout_limit is not None:
+        mcts_cfg["rollout_limit"] = args.rollout_limit
 
     if config.get("ai_player") not in (PLAYER_ONE, PLAYER_TWO):
         raise ValueError("ai_player must be 1 or 2")
@@ -146,6 +156,10 @@ def merge_runtime_config(args: argparse.Namespace) -> dict:
         raise ValueError("mcts.n_playout must be > 0")
     if float(mcts_cfg.get("c_puct", 0.0)) <= 0:
         raise ValueError("mcts.c_puct must be > 0")
+    if mcts_cfg.get("rollout_policy", "tactical") not in ("uniform", "tactical", 0, 1):
+        raise ValueError("mcts.rollout_policy must be uniform or tactical")
+    if int(mcts_cfg.get("rollout_limit", 32)) <= 0:
+        raise ValueError("mcts.rollout_limit must be > 0")
 
     return config
 
@@ -159,6 +173,14 @@ def action_to_label(action: int | None) -> str:
 
 def player_name(player: int) -> str:
     return "Player 1" if player == PLAYER_ONE else "Player 2"
+
+
+def rollout_policy_id(value: str | int) -> int:
+    if value in ("uniform", 0):
+        return 0
+    if value in ("tactical", 1):
+        return 1
+    raise ValueError("mcts.rollout_policy must be uniform or tactical")
 
 
 class APIError(Exception):
@@ -177,12 +199,16 @@ class GameSession:
         ai_player: int,
         n_playout: int,
         c_puct: float,
+        rollout_policy: int,
+        rollout_limit: int,
         seed: int,
     ) -> None:
         self.module = module
         self.ai_player = ai_player
         self.n_playout = n_playout
         self.c_puct = c_puct
+        self.rollout_policy = rollout_policy
+        self.rollout_limit = rollout_limit
         self.seed = seed
         self.lock = threading.RLock()
         self.game: Any = None
@@ -204,6 +230,8 @@ class GameSession:
             c_puct=self.c_puct,
             seed=self.seed,
             capture_search_tree=True,
+            rollout_policy=self.rollout_policy,
+            rollout_limit=self.rollout_limit,
         )
 
     def _reset_locked(self) -> None:
@@ -281,6 +309,8 @@ class GameSession:
                 "config": {
                     "n_playout": self.n_playout,
                     "c_puct": self.c_puct,
+                    "rollout_policy": self.rollout_policy,
+                    "rollout_limit": self.rollout_limit,
                     "seed": self.seed,
                 },
                 "tree_history": [dict(item) for item in self.tree_history],
@@ -344,6 +374,8 @@ class GameSession:
                         "action_label": action_to_label(action),
                         "n_playout": self.n_playout,
                         "c_puct": self.c_puct,
+                        "rollout_policy": self.rollout_policy,
+                        "rollout_limit": self.rollout_limit,
                     }
                 )
                 self.tree_snapshots[tree_id] = tree
@@ -792,6 +824,10 @@ def build_serve_argv(args: argparse.Namespace) -> list[str]:
         command.extend(("--n-playout", str(args.n_playout)))
     if args.c_puct is not None:
         command.extend(("--c-puct", str(args.c_puct)))
+    if args.rollout_policy is not None:
+        command.extend(("--rollout-policy", args.rollout_policy))
+    if args.rollout_limit is not None:
+        command.extend(("--rollout-limit", str(args.rollout_limit)))
     return command
 
 
@@ -880,6 +916,8 @@ def run_server_process(args: argparse.Namespace) -> int:
         ai_player=int(config["ai_player"]),
         n_playout=int(config["mcts"]["n_playout"]),
         c_puct=float(config["mcts"]["c_puct"]),
+        rollout_policy=rollout_policy_id(config["mcts"].get("rollout_policy", "tactical")),
+        rollout_limit=int(config["mcts"].get("rollout_limit", 32)),
         seed=args.seed,
     )
     controller = HumanPlayServerController(session, args.host, args.port)

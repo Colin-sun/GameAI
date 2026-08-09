@@ -29,12 +29,22 @@ def main() -> int:
 
     n_playout = int(config["mcts"]["n_playout"])
     c_puct = float(config["mcts"]["c_puct"])
+    rollout_policy = config["mcts"].get("rollout_policy", "tactical")
+    policy_id = {"uniform": 0, "tactical": 1}.get(rollout_policy, rollout_policy)
+    policy_id = int(policy_id)
+    rollout_limit = int(config["mcts"].get("rollout_limit", 32 if policy_id else 300))
 
     print(f"读取配置文件: {args.config}")
     print("初始化完成，开始测试")
 
     board = gameai_native.UltimateTicTacToe()
-    aiplayer = gameai_native.MCTSPure(n_playout=n_playout, c_puct=c_puct, seed=args.seed)
+    aiplayer = gameai_native.MCTSPure(
+        n_playout=n_playout,
+        c_puct=c_puct,
+        seed=args.seed,
+        rollout_policy=policy_id,
+        rollout_limit=rollout_limit,
+    )
 
     for run_index in range(args.runs):
         start = time.perf_counter()

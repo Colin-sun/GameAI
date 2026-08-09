@@ -66,7 +66,8 @@ public:
             std::shared_ptr<TreeNode> node = pair.second;
             float value = node->get_value(c_puct);
 
-            if (value > best_value) {
+            if (value > best_value ||
+                (value == best_value && action < best_action)) {
                 best_value = value;
                 best_action = action;
                 best_node = node;

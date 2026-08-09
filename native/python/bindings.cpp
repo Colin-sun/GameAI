@@ -60,21 +60,59 @@ py::dict search_tree_snapshot_to_dict(const SearchTreeSnapshot& snapshot) {
     return result;
 }
 
-int play_game(
+struct GameResult {
+    int winner;
+    int moves;
+};
+
+struct MatchGameResult {
+    bool candidate1_first;
+    int candidate_winner;
+    int moves;
+};
+
+struct MatchSummary {
+    int candidate1_wins = 0;
+    int candidate2_wins = 0;
+    int draws = 0;
+    std::vector<MatchGameResult> games;
+};
+
+GameResult play_game(
     int n_playout_player_one,
     float c_puct_player_one,
     unsigned int seed_player_one,
+    int rollout_policy_player_one,
+    int rollout_limit_player_one,
     int n_playout_player_two,
     float c_puct_player_two,
-    unsigned int seed_player_two) {
+    unsigned int seed_player_two,
+    int rollout_policy_player_two,
+    int rollout_limit_player_two) {
     std::mt19937 rng_player_one(seed_player_one);
     std::mt19937 rng_player_two(seed_player_two);
-    MCTSPure<UltimateTicTacToe, ActionList> player_one(n_playout_player_one, c_puct_player_one, rng_player_one);
-    MCTSPure<UltimateTicTacToe, ActionList> player_two(n_playout_player_two, c_puct_player_two, rng_player_two);
+    MCTSPure<UltimateTicTacToe, ActionList> player_one(
+        n_playout_player_one,
+        c_puct_player_one,
+        rng_player_one,
+        false,
+        rollout_policy_player_one,
+        rollout_limit_player_one);
+    MCTSPure<UltimateTicTacToe, ActionList> player_two(
+        n_playout_player_two,
+        c_puct_player_two,
+        rng_player_two,
+        false,
+        rollout_policy_player_two,
+        rollout_limit_player_two);
 
     UltimateTicTacToe game;
     std::pair<bool, int> done_winner;
+    int moves = 0;
     while (!(done_winner = game.get_done_winner()).first) {
+        if (moves >= MAX_MOVES) {
+            throw std::runtime_error("Self-play exceeded the maximum move count");
+        }
         int action = -1;
         if (game.get_current_player() == 1) {
             action = player_one.get_move(game);
@@ -86,8 +124,9 @@ int play_game(
         if (action == -1 || !game.make_move(action)) {
             throw std::runtime_error("MCTS produced an invalid move during self-play");
         }
+        ++moves;
     }
-    return done_winner.second;
+    return GameResult{done_winner.second, moves};
 }
 
 unsigned int mix_seed(unsigned int base_seed, int offset) {
@@ -100,68 +139,160 @@ unsigned int mix_seed(unsigned int base_seed, int offset) {
     return static_cast<unsigned int>(mixed);
 }
 
+MatchSummary compare_mcts_summary(
+    int n_playout1,
+    float c_puct1,
+    int n_playout2,
+    float c_puct2,
+    int games_per_side,
+    unsigned int seed,
+    int rollout_policy1,
+    int rollout_limit1,
+    int rollout_policy2,
+    int rollout_limit2) {
+    if (games_per_side <= 0) {
+        throw std::runtime_error("games_per_side must be positive");
+    }
+
+    MatchSummary summary;
+    summary.games.reserve(games_per_side * 2);
+
+    auto record_game = [&summary](const GameResult& result, bool candidate1_first) {
+        int candidate_winner = 0;
+        if (result.winner == 1) {
+            candidate_winner = candidate1_first ? 1 : 2;
+        } else if (result.winner == 2) {
+            candidate_winner = candidate1_first ? 2 : 1;
+        }
+        if (candidate_winner == 1) {
+            ++summary.candidate1_wins;
+        } else if (candidate_winner == 2) {
+            ++summary.candidate2_wins;
+        } else {
+            ++summary.draws;
+        }
+        summary.games.push_back(MatchGameResult{candidate1_first, candidate_winner, result.moves});
+    };
+
+    for (int game_index = 0; game_index < games_per_side; ++game_index) {
+        const GameResult result = play_game(
+            n_playout1,
+            c_puct1,
+            mix_seed(seed, game_index * 4),
+            rollout_policy1,
+            rollout_limit1,
+            n_playout2,
+            c_puct2,
+            mix_seed(seed, game_index * 4 + 1),
+            rollout_policy2,
+            rollout_limit2);
+        record_game(result, true);
+    }
+
+    for (int game_index = 0; game_index < games_per_side; ++game_index) {
+        const GameResult result = play_game(
+            n_playout2,
+            c_puct2,
+            mix_seed(seed, games_per_side * 4 + game_index * 4),
+            rollout_policy2,
+            rollout_limit2,
+            n_playout1,
+            c_puct1,
+            mix_seed(seed, games_per_side * 4 + game_index * 4 + 1),
+            rollout_policy1,
+            rollout_limit1);
+        record_game(result, false);
+    }
+
+    return summary;
+}
+
 std::tuple<float, float> compare_mcts(
     int n_playout1,
     float c_puct1,
     int n_playout2,
     float c_puct2,
     int games_per_side,
-    unsigned int seed) {
-    if (games_per_side <= 0) {
-        throw std::runtime_error("games_per_side must be positive");
-    }
-
-    float score1 = 0.0f;
-    float score2 = 0.0f;
-
-    for (int game_index = 0; game_index < games_per_side; ++game_index) {
-        int winner = play_game(
-            n_playout1,
-            c_puct1,
-            mix_seed(seed, game_index * 4),
-            n_playout2,
-            c_puct2,
-            mix_seed(seed, game_index * 4 + 1));
-
-        if (winner == 1) {
-            score1 += 1.0f;
-        } else if (winner == 2) {
-            score2 += 1.0f;
-        } else {
-            score1 += 0.5f;
-            score2 += 0.5f;
-        }
-    }
-
-    for (int game_index = 0; game_index < games_per_side; ++game_index) {
-        int winner = play_game(
-            n_playout2,
-            c_puct2,
-            mix_seed(seed, games_per_side * 4 + game_index * 4),
-            n_playout1,
-            c_puct1,
-            mix_seed(seed, games_per_side * 4 + game_index * 4 + 1));
-
-        if (winner == 1) {
-            score2 += 1.0f;
-        } else if (winner == 2) {
-            score1 += 1.0f;
-        } else {
-            score1 += 0.5f;
-            score2 += 0.5f;
-        }
-    }
-
+    unsigned int seed,
+    int rollout_policy1,
+    int rollout_limit1,
+    int rollout_policy2,
+    int rollout_limit2) {
+    const MatchSummary summary = compare_mcts_summary(
+        n_playout1,
+        c_puct1,
+        n_playout2,
+        c_puct2,
+        games_per_side,
+        seed,
+        rollout_policy1,
+        rollout_limit1,
+        rollout_policy2,
+        rollout_limit2);
+    const float score1 = static_cast<float>(summary.candidate1_wins) + 0.5f * summary.draws;
+    const float score2 = static_cast<float>(summary.candidate2_wins) + 0.5f * summary.draws;
     return std::make_tuple(score1, score2);
+}
+
+py::dict compare_mcts_detailed(
+    int n_playout1,
+    float c_puct1,
+    int n_playout2,
+    float c_puct2,
+    int games_per_side,
+    unsigned int seed,
+    int rollout_policy1,
+    int rollout_limit1,
+    int rollout_policy2,
+    int rollout_limit2) {
+    const MatchSummary summary = compare_mcts_summary(
+        n_playout1,
+        c_puct1,
+        n_playout2,
+        c_puct2,
+        games_per_side,
+        seed,
+        rollout_policy1,
+        rollout_limit1,
+        rollout_policy2,
+        rollout_limit2);
+    const float score1 = static_cast<float>(summary.candidate1_wins) + 0.5f * summary.draws;
+    const float score2 = static_cast<float>(summary.candidate2_wins) + 0.5f * summary.draws;
+
+    py::list games;
+    for (const MatchGameResult& game : summary.games) {
+        py::dict item;
+        item["candidate1_first"] = game.candidate1_first;
+        item["candidate_winner"] = game.candidate_winner;
+        item["moves"] = game.moves;
+        games.append(item);
+    }
+
+    py::dict result;
+    result["candidate1_wins"] = summary.candidate1_wins;
+    result["candidate2_wins"] = summary.candidate2_wins;
+    result["draws"] = summary.draws;
+    result["games"] = games;
+    result["score1"] = score1;
+    result["score2"] = score2;
+    result["total_games"] = games_per_side * 2;
+    return result;
 }
 
 } // namespace
 
 class PyMCTSPure {
 public:
-    PyMCTSPure(int n_playout, float c_puct, unsigned int seed, bool capture_search_tree)
+    PyMCTSPure(
+        int n_playout,
+        float c_puct,
+        unsigned int seed,
+        bool capture_search_tree,
+        int rollout_policy,
+        int rollout_limit)
         : n_playout(n_playout), c_puct(c_puct), seed_rng(seed),
-          engine(n_playout, c_puct, seed_rng, capture_search_tree) {
+          rollout_policy(rollout_policy), rollout_limit(rollout_limit),
+          engine(n_playout, c_puct, seed_rng, capture_search_tree, rollout_policy, rollout_limit) {
     }
 
     int get_move(const UltimateTicTacToe& game) {
@@ -171,7 +302,13 @@ public:
 
     int suggest_move(const UltimateTicTacToe& game) {
         std::mt19937 temp_rng(seed_rng());
-        MCTSPure<UltimateTicTacToe, ActionList> temp_engine(n_playout, c_puct, temp_rng, false);
+        MCTSPure<UltimateTicTacToe, ActionList> temp_engine(
+            n_playout,
+            c_puct,
+            temp_rng,
+            false,
+            rollout_policy,
+            rollout_limit);
         UltimateTicTacToe state = game;
         return temp_engine.get_move(state);
     }
@@ -192,6 +329,8 @@ private:
     int n_playout;
     float c_puct;
     std::mt19937 seed_rng;
+    int rollout_policy;
+    int rollout_limit;
     MCTSPure<UltimateTicTacToe, ActionList> engine;
 };
 
@@ -207,7 +346,24 @@ PYBIND11_MODULE(gameai_native, m) {
         py::arg("n_playout2"),
         py::arg("c_puct2"),
         py::arg("games_per_side") = 8,
-        py::arg("seed") = std::random_device{}());
+        py::arg("seed") = std::random_device{}(),
+        py::arg("rollout_policy1") = 0,
+        py::arg("rollout_limit1") = 300,
+        py::arg("rollout_policy2") = 0,
+        py::arg("rollout_limit2") = 300);
+    m.def(
+        "compare_mcts_detailed",
+        &compare_mcts_detailed,
+        py::arg("n_playout1"),
+        py::arg("c_puct1"),
+        py::arg("n_playout2"),
+        py::arg("c_puct2"),
+        py::arg("games_per_side") = 8,
+        py::arg("seed") = std::random_device{}(),
+        py::arg("rollout_policy1") = 0,
+        py::arg("rollout_limit1") = 300,
+        py::arg("rollout_policy2") = 0,
+        py::arg("rollout_limit2") = 300);
 
     py::class_<UltimateTicTacToe>(m, "UltimateTicTacToe")
         .def(py::init<>())
@@ -215,6 +371,12 @@ PYBIND11_MODULE(gameai_native, m) {
                                      std::pair<int, int> next_board) {
             if (board.size() != BOARD_SIZE) {
                 throw std::runtime_error("board must have 9 rows");
+            }
+            const bool any_next_board = next_board.first != -1 || next_board.second != -1;
+            if (any_next_board &&
+                (next_board.first < 0 || next_board.first >= META_BOARD_SIZE ||
+                 next_board.second < 0 || next_board.second >= META_BOARD_SIZE)) {
+                throw std::runtime_error("next_board must be (-1, -1) or a 3x3 board coordinate");
             }
 
             NewGameParameters params{};
@@ -224,6 +386,9 @@ PYBIND11_MODULE(gameai_native, m) {
                     throw std::runtime_error("board must have 9 columns");
                 }
                 for (int col = 0; col < BOARD_SIZE; ++col) {
+                    if (board[row][col] < 0 || board[row][col] > 2) {
+                        throw std::runtime_error("board values must be 0, 1, or 2");
+                    }
                     params.board[row][col] = board[row][col];
                 }
             }
@@ -253,6 +418,9 @@ PYBIND11_MODULE(gameai_native, m) {
         .def("make_move_rc", [](UltimateTicTacToe& game, int row, int col) {
             return game.make_move(game.get_action_index(row, col));
         })
+        .def("undo_move_rc", [](UltimateTicTacToe& game, int row, int col) {
+            game.undo_move(std::make_pair(row, col));
+        })
         .def("get_done_winner", &UltimateTicTacToe::get_done_winner)
         .def("get_current_player", &UltimateTicTacToe::get_current_player)
         .def("get_action_index", &UltimateTicTacToe::get_action_index)
@@ -260,11 +428,13 @@ PYBIND11_MODULE(gameai_native, m) {
         .def("get_step", &UltimateTicTacToe::get_step);
 
     py::class_<PyMCTSPure>(m, "MCTSPure")
-        .def(py::init<int, float, unsigned int, bool>(),
+        .def(py::init<int, float, unsigned int, bool, int, int>(),
              py::arg("n_playout"),
              py::arg("c_puct"),
              py::arg("seed") = std::random_device{}(),
-             py::arg("capture_search_tree") = false)
+             py::arg("capture_search_tree") = false,
+             py::arg("rollout_policy") = 1,
+             py::arg("rollout_limit") = 32)
         .def("get_move", &PyMCTSPure::get_move)
         .def("suggest_move", &PyMCTSPure::suggest_move)
         .def("update_with_move", &PyMCTSPure::update_with_move)

@@ -5,10 +5,9 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "gameai"
 version = "0.1.0"
-description = "Python scripts for GameAI tooling and terminal human play"
+description = "Python scripts for GameAI tooling and browser human play"
 requires-python = ">=3.13"
 dependencies = [
     "json5>=0.9",
     "optuna>=4.5",
-    "rich>=13.0",
 ]

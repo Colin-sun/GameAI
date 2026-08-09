@@ -1,0 +1,647 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GameAI / Human Play</title>
+  <style>
+    :root {
+      --bg: #161817;
+      --surface: #1d211f;
+      --surface-strong: #242a27;
+      --ink: #e1ded4;
+      --muted: #7c847b;
+      --line: #3b423d;
+      --line-soft: #2b312d;
+      --red: #d55e42;
+      --green: #3fa08a;
+      --amber: #e9b44c;
+      --amber-soft: rgba(233, 180, 76, .16);
+      --danger: #e07b61;
+      --serif: "Baskerville", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html { background: var(--bg); color-scheme: dark; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--sans);
+      line-height: 1.45;
+    }
+    button, a { font: inherit; }
+    button { cursor: pointer; }
+    button:disabled { cursor: not-allowed; }
+    a { color: inherit; text-decoration: none; }
+    .app-shell { min-height: 100vh; }
+    .topbar {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 25px 32px 20px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 28px;
+      border-bottom: 1px solid var(--line);
+    }
+    .brand { display: grid; gap: 3px; }
+    .eyebrow, .kicker, .micro-label {
+      color: var(--muted);
+      font: 11px/1.2 var(--mono);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    h1, h2, h3, p { margin: 0; }
+    h1 {
+      color: var(--ink);
+      font: 400 36px/1.02 var(--serif);
+      letter-spacing: 0;
+    }
+    h2 {
+      color: var(--ink);
+      font: 400 21px/1.1 var(--serif);
+      letter-spacing: 0;
+    }
+    .top-actions { display: flex; gap: 8px; align-items: center; }
+    .action-button {
+      min-height: 36px;
+      padding: 8px 13px;
+      border: 1px solid var(--line);
+      border-radius: 2px;
+      background: transparent;
+      color: var(--ink);
+      font: 12px/1 var(--mono);
+      transition: border-color .16s ease, color .16s ease, background .16s ease;
+    }
+    .action-button:hover:not(:disabled), .action-button:focus-visible {
+      border-color: var(--amber);
+      color: var(--amber);
+      outline: none;
+    }
+    .action-button.primary {
+      border-color: var(--amber);
+      color: var(--amber);
+    }
+    .action-button:disabled { opacity: .42; }
+    .workspace {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 30px 32px 48px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 290px;
+      gap: 42px;
+    }
+    .board-stage { min-width: 0; }
+    .section-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 18px;
+      margin-bottom: 19px;
+    }
+    .section-heading .reading {
+      color: var(--muted);
+      font: 12px var(--mono);
+    }
+    .board-shell {
+      width: min(100%, 720px);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 22px minmax(0, 1fr);
+      grid-template-rows: 20px minmax(0, 1fr);
+      gap: 7px;
+    }
+    .file-labels {
+      grid-column: 2;
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      color: var(--muted);
+      font: 11px/20px var(--mono);
+      text-align: center;
+    }
+    .rank-labels {
+      display: grid;
+      grid-template-rows: repeat(9, 1fr);
+      color: var(--muted);
+      font: 11px var(--mono);
+      text-align: center;
+    }
+    .rank-labels span { display: grid; place-items: center; }
+    .board {
+      min-width: 0;
+      aspect-ratio: 1;
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: var(--surface);
+    }
+    .board-cell {
+      min-width: 0;
+      min-height: 0;
+      padding: 0;
+      border: 0;
+      border-right: 1px solid var(--line-soft);
+      border-bottom: 1px solid var(--line-soft);
+      background: var(--surface);
+      color: var(--muted);
+      font: 22px/1 var(--serif);
+      position: relative;
+      transition: background .16s ease, color .16s ease, box-shadow .16s ease;
+    }
+    .board-cell:nth-child(9n) { border-right: 0; }
+    .board-cell:nth-child(n + 73) { border-bottom: 0; }
+    .board-cell:nth-child(3n):not(:nth-child(9n)) { border-right-color: var(--line); }
+    .board-cell:nth-child(n + 19):nth-child(-n + 27),
+    .board-cell:nth-child(n + 46):nth-child(-n + 54) { border-bottom-color: var(--line); }
+    .board-cell.legal { color: #b8bcb3; }
+    .board-cell.legal:hover:not(:disabled) { background: #2c332e; color: var(--ink); }
+    .board-cell.target { background: rgba(63, 160, 138, .08); }
+    .board-cell.mark-one { color: var(--red); font-size: 25px; }
+    .board-cell.mark-two { color: var(--green); font-size: 25px; }
+    .board-cell.recent { box-shadow: inset 0 0 0 2px var(--amber); z-index: 1; }
+    .board-cell.suggestion::after {
+      content: "";
+      position: absolute;
+      width: 9px;
+      height: 9px;
+      border: 1px solid var(--amber);
+      border-radius: 50%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .board-cell:focus-visible {
+      outline: 2px solid var(--ink);
+      outline-offset: -4px;
+      z-index: 2;
+    }
+    .board-note {
+      max-width: 720px;
+      margin: 17px auto 0;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--muted);
+      font: 11px/1.5 var(--mono);
+    }
+    .legend { display: flex; flex-wrap: wrap; gap: 13px; }
+    .legend span { white-space: nowrap; }
+    .legend i {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      margin-right: 5px;
+      border: 1px solid currentColor;
+      vertical-align: 1px;
+    }
+    .legend .red { color: var(--red); }
+    .legend .green { color: var(--green); }
+    .legend .amber { color: var(--amber); }
+    .sidebar { min-width: 0; border-top: 1px solid var(--line); }
+    .side-section { padding: 19px 0 21px; border-bottom: 1px solid var(--line); }
+    .side-section h2 { margin-bottom: 14px; }
+    .status-line { display: flex; align-items: center; gap: 9px; }
+    .status-dot {
+      width: 9px;
+      height: 9px;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      background: var(--muted);
+    }
+    .status-dot.player { background: var(--red); }
+    .status-dot.ai { background: var(--green); }
+    .status-dot.thinking { background: var(--amber); }
+    .status-dot.error { background: var(--danger); }
+    .status-dot.finished { background: var(--muted); }
+    .status-title { font: 16px var(--serif); }
+    .status-message { min-height: 42px; margin-top: 11px; color: var(--muted); font-size: 13px; }
+    .metrics { margin: 17px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .metrics div { min-width: 0; }
+    .metrics dt { color: var(--muted); font: 10px var(--mono); text-transform: uppercase; }
+    .metrics dd { margin: 3px 0 0; color: var(--ink); font: 14px var(--mono); overflow-wrap: anywhere; }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+      width: 132px;
+      aspect-ratio: 1;
+    }
+    .meta-cell {
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line-soft);
+      background: var(--surface);
+      color: var(--muted);
+      font: 18px var(--serif);
+    }
+    .meta-cell.target { border-color: var(--amber); color: var(--amber); }
+    .meta-cell.meta-one { color: var(--red); }
+    .meta-cell.meta-two { color: var(--green); }
+    .meta-cell.meta-draw { color: var(--muted); }
+    .hint-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .hint-value { color: var(--amber); font: 18px var(--mono); }
+    .hint-copy { margin-top: 10px; color: var(--muted); font-size: 12px; }
+    .retry-button { margin-top: 12px; display: none; }
+    .retry-button.visible { display: inline-block; }
+    .history-section {
+      grid-column: 1 / -1;
+      padding-top: 22px;
+      border-top: 1px solid var(--line);
+    }
+    .history-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; }
+    .history-empty { color: var(--muted); font-size: 13px; }
+    .history-row {
+      min-height: 58px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-left: 2px solid var(--amber);
+      background: var(--surface);
+      transition: background .16s ease;
+    }
+    .history-row:hover, .history-row:focus-visible { background: var(--surface-strong); outline: none; }
+    .history-primary { display: grid; gap: 3px; }
+    .history-move { color: var(--amber); font: 14px var(--mono); }
+    .history-turn { color: var(--muted); font: 10px var(--mono); text-transform: uppercase; }
+    .history-stats { color: var(--muted); font: 11px var(--mono); text-align: right; }
+    .toast {
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      max-width: min(360px, calc(100vw - 48px));
+      padding: 12px 14px;
+      border: 1px solid var(--amber);
+      background: var(--surface-strong);
+      color: var(--ink);
+      font: 12px/1.4 var(--mono);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(8px);
+      transition: opacity .16s ease, transform .16s ease;
+    }
+    .toast.visible { opacity: 1; transform: translateY(0); }
+    @media (max-width: 900px) {
+      .topbar { padding: 21px 20px 17px; align-items: flex-start; }
+      h1 { font-size: 31px; }
+      .workspace { padding: 24px 20px 36px; grid-template-columns: 1fr; gap: 30px; }
+      .sidebar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 24px; }
+      .sidebar .side-section:first-child { grid-column: 1 / -1; }
+      .history-section { grid-column: 1; }
+    }
+    @media (max-width: 560px) {
+      .topbar { display: block; }
+      .top-actions { margin-top: 17px; }
+      .workspace { padding: 20px 14px 30px; }
+      .board-shell { grid-template-columns: 18px minmax(0, 1fr); gap: 5px; }
+      .board-cell { font-size: 17px; }
+      .board-cell.mark-one, .board-cell.mark-two { font-size: 20px; }
+      .board-note { display: block; }
+      .legend { margin-bottom: 7px; }
+      .sidebar { display: block; }
+      .history-list { grid-template-columns: 1fr; }
+      .toast { right: 14px; bottom: 14px; max-width: calc(100vw - 28px); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <span class="kicker">GameAI / local observatory</span>
+        <h1>Human Play</h1>
+      </div>
+      <nav class="top-actions" aria-label="Game controls">
+        <button class="action-button" id="resetButton" type="button">Reset game</button>
+        <a class="action-button primary" href="/tree">Decision tree</a>
+      </nav>
+    </header>
+
+    <main class="workspace">
+      <section class="board-stage" aria-labelledby="boardHeading">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">Live board</span>
+            <h2 id="boardHeading">Ultimate Tic Tac Toe</h2>
+          </div>
+          <span class="reading" id="stepReading">STEP 00</span>
+        </div>
+        <div class="board-shell">
+          <div class="file-labels" aria-hidden="true">
+            <span>A</span><span>B</span><span>C</span><span>D</span><span>E</span><span>F</span><span>G</span><span>H</span><span>I</span>
+          </div>
+          <div class="rank-labels" aria-hidden="true">
+            <span>9</span><span>8</span><span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span>
+          </div>
+          <div class="board" id="board" role="grid" aria-label="Ultimate Tic Tac Toe board"></div>
+        </div>
+        <div class="board-note">
+          <div class="legend" aria-label="Board legend">
+            <span class="red"><i></i>Player 1</span>
+            <span class="green"><i></i>Player 2</span>
+            <span class="amber"><i></i>AI line</span>
+          </div>
+          <span id="targetReading">TARGET ANY OPEN BOARD</span>
+        </div>
+      </section>
+
+      <aside class="sidebar" aria-label="Game status">
+        <section class="side-section">
+          <span class="eyebrow">Current reading</span>
+          <div class="status-line" style="margin-top: 11px">
+            <span class="status-dot" id="statusDot"></span>
+            <strong class="status-title" id="statusTitle">Connecting</strong>
+          </div>
+          <p class="status-message" id="statusMessage" aria-live="polite">Loading the board state.</p>
+          <dl class="metrics">
+            <div><dt>AI side</dt><dd id="aiSide">--</dd></div>
+            <div><dt>Last move</dt><dd id="lastMove">--</dd></div>
+            <div><dt>Next player</dt><dd id="nextPlayer">--</dd></div>
+            <div><dt>Target board</dt><dd id="targetBoard">ANY</dd></div>
+          </dl>
+          <button class="action-button retry-button" id="retryButton" type="button">Retry AI search</button>
+        </section>
+
+        <section class="side-section">
+          <span class="eyebrow">Meta position</span>
+          <h2 style="margin-top: 7px">Nine boards, one line</h2>
+          <div class="meta-grid" id="metaGrid" role="img" aria-label="Meta board status" style="margin-top: 14px"></div>
+        </section>
+
+        <section class="side-section">
+          <span class="eyebrow">Player instrument</span>
+          <div class="hint-row" style="margin-top: 10px">
+            <span class="hint-value" id="hintValue">--</span>
+            <button class="action-button" id="hintButton" type="button">Get hint</button>
+          </div>
+          <p class="hint-copy">The hint searches a temporary tree and leaves the position unchanged.</p>
+        </section>
+      </aside>
+
+      <section class="history-section" aria-labelledby="historyHeading">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">AI search record</span>
+            <h2 id="historyHeading">Turn history</h2>
+          </div>
+          <span class="reading" id="searchReading">NO SEARCHES</span>
+        </div>
+        <div class="history-list" id="historyList"></div>
+      </section>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      const $ = (id) => document.getElementById(id);
+      let state = null;
+      let activeSearch = false;
+      let toastTimer = null;
+
+      const playerName = (player) => player === 1 ? "Player 1" : "Player 2";
+      const actionLabel = (action) => {
+        if (action === null || action === undefined || action < 0 || action >= 81) return "--";
+        return String.fromCharCode(65 + (action % 9)) + String(9 - Math.floor(action / 9));
+      };
+      const formatNumber = (value) => Number(value || 0).toLocaleString("en-US");
+
+      async function request(path, method = "GET", body = undefined) {
+        const options = { method, headers: {} };
+        if (body !== undefined) {
+          options.headers["Content-Type"] = "application/json";
+          options.body = JSON.stringify(body);
+        }
+        const response = await fetch(path, options);
+        const data = await response.json().catch(() => ({ error: "The server returned invalid JSON." }));
+        if (!response.ok) {
+          const error = new Error(data.error || `Request failed (${response.status})`);
+          error.payload = data;
+          throw error;
+        }
+        return data;
+      }
+
+      function applyPayload(payload) {
+        state = payload.state || payload;
+        render();
+      }
+
+      function showToast(message) {
+        const toast = $("toast");
+        toast.textContent = message;
+        toast.classList.add("visible");
+        window.clearTimeout(toastTimer);
+        toastTimer = window.setTimeout(() => toast.classList.remove("visible"), 3600);
+      }
+
+      function targetCells() {
+        const cells = new Set();
+        if (!state || !state.next_board || state.next_board[0] < 0) return cells;
+        const subRow = state.next_board[0];
+        const subCol = state.next_board[1];
+        if ((state.meta_board[subRow] || [])[subCol] !== 0) return cells;
+        for (let row = subRow * 3; row < subRow * 3 + 3; row += 1) {
+          for (let col = subCol * 3; col < subCol * 3 + 3; col += 1) {
+            cells.add(row * 9 + col);
+          }
+        }
+        return cells;
+      }
+
+      function renderBoard() {
+        const board = $("board");
+        board.replaceChildren();
+        const legal = new Set(state.legal_actions || []);
+        const targets = targetCells();
+        const busy = activeSearch || state.searching;
+        for (let row = 0; row < 9; row += 1) {
+          for (let col = 0; col < 9; col += 1) {
+            const action = row * 9 + col;
+            const value = state.board[row][col];
+            const cell = document.createElement("button");
+            cell.type = "button";
+            cell.className = "board-cell";
+            cell.setAttribute("role", "gridcell");
+            cell.setAttribute("aria-label", `${actionLabel(action)}, ${value === 0 ? "empty" : playerName(value)}`);
+            cell.title = actionLabel(action);
+            if (value === 1) { cell.textContent = "X"; cell.classList.add("mark-one"); }
+            if (value === 2) { cell.textContent = "O"; cell.classList.add("mark-two"); }
+            if (targets.has(action)) cell.classList.add("target");
+            if (legal.has(action)) cell.classList.add("legal");
+            if (state.last_move === action) cell.classList.add("recent");
+            if (state.suggested_action === action) cell.classList.add("suggestion");
+            cell.disabled = busy || !state.can_move || !legal.has(action);
+            cell.addEventListener("click", () => playMove(action));
+            board.appendChild(cell);
+          }
+        }
+      }
+
+      function renderMeta() {
+        const grid = $("metaGrid");
+        grid.replaceChildren();
+        const next = state.next_board || [-1, -1];
+        for (let row = 0; row < 3; row += 1) {
+          for (let col = 0; col < 3; col += 1) {
+            const value = state.meta_board[row][col];
+            const cell = document.createElement("div");
+            cell.className = "meta-cell";
+            cell.setAttribute("aria-label", `Board ${row + 1}, ${col + 1}`);
+            cell.textContent = value === 1 ? "X" : value === 2 ? "O" : value === 3 ? "." : "";
+            if (value === 1) cell.classList.add("meta-one");
+            if (value === 2) cell.classList.add("meta-two");
+            if (value === 3) cell.classList.add("meta-draw");
+            if (row === next[0] && col === next[1] && value === 0) cell.classList.add("target");
+            grid.appendChild(cell);
+          }
+        }
+      }
+
+      function renderHistory() {
+        const list = $("historyList");
+        list.replaceChildren();
+        const history = state.tree_history || [];
+        $("searchReading").textContent = history.length ? `${history.length} SEARCH${history.length === 1 ? "" : "ES"}` : "NO SEARCHES";
+        if (!history.length) {
+          const empty = document.createElement("p");
+          empty.className = "history-empty";
+          empty.textContent = "AI search records will appear after the first response.";
+          list.appendChild(empty);
+          return;
+        }
+        history.slice().reverse().forEach((entry) => {
+          const link = document.createElement("a");
+          link.className = "history-row";
+          link.href = `/tree?tree=${entry.id}`;
+          link.setAttribute("aria-label", `Open AI search ${entry.id}, move ${entry.action_label}`);
+          const primary = document.createElement("span");
+          primary.className = "history-primary";
+          const move = document.createElement("span");
+          move.className = "history-move";
+          move.textContent = entry.action_label;
+          const turn = document.createElement("span");
+          turn.className = "history-turn";
+          turn.textContent = `Search ${String(entry.id).padStart(2, "0")} / step ${String(entry.step).padStart(2, "0")}`;
+          primary.append(move, turn);
+          const stats = document.createElement("span");
+          stats.className = "history-stats";
+          stats.textContent = `${formatNumber(entry.root_visits)} visits\n${formatNumber(entry.node_count)} nodes`;
+          stats.style.whiteSpace = "pre-line";
+          link.append(primary, stats);
+          list.appendChild(link);
+        });
+      }
+
+      function render() {
+        if (!state) return;
+        renderBoard();
+        renderMeta();
+        renderHistory();
+        const busy = activeSearch || state.searching;
+        const status = busy ? "thinking" : state.status;
+        const title = busy ? "Thinking" : status === "ai_turn" ? "AI turn" : status === "player_turn" ? "Your turn" : status === "finished" ? "Game over" : status === "error" ? "Search error" : "Ready";
+        $("statusTitle").textContent = title;
+        $("statusMessage").textContent = busy ? "MCTS is evaluating the position." : state.message;
+        $("statusDot").className = `status-dot ${status === "ai_turn" ? "ai" : status === "player_turn" ? "player" : status}`;
+        $("aiSide").textContent = playerName(state.ai_player);
+        $("lastMove").textContent = actionLabel(state.last_move);
+        $("nextPlayer").textContent = state.done ? "Settled" : playerName(state.current_player);
+        $("targetBoard").textContent = state.next_board && state.next_board[0] >= 0 ? `${state.next_board[0] + 1},${state.next_board[1] + 1}` : "ANY";
+        $("stepReading").textContent = `STEP ${String(state.step).padStart(2, "0")}`;
+        $("targetReading").textContent = state.next_board && state.next_board[0] >= 0 ? `TARGET ${state.next_board[0] + 1},${state.next_board[1] + 1}` : "TARGET ANY OPEN BOARD";
+        $("hintValue").textContent = state.suggested_action === null || state.suggested_action === undefined ? "--" : actionLabel(state.suggested_action);
+        $("hintButton").disabled = busy || state.done || state.current_player === state.ai_player;
+        $("resetButton").disabled = busy;
+        const retry = $("retryButton");
+        retry.classList.toggle("visible", state.search_error_kind === "ai" && !busy && !state.done);
+        retry.disabled = busy;
+      }
+
+      async function loadState() {
+        try {
+          applyPayload(await request("/api/state"));
+          maybeStartAi();
+        } catch (error) {
+          showToast(error.message);
+        }
+      }
+
+      async function playMove(action) {
+        if (!state || activeSearch || state.searching || !state.can_move) return;
+        try {
+          applyPayload(await request("/api/move", "POST", { action }));
+          maybeStartAi();
+        } catch (error) {
+          if (error.payload && error.payload.state) applyPayload(error.payload.state);
+          showToast(error.message);
+        }
+      }
+
+      async function startAiTurn() {
+        const retryingAi = state && state.search_error_kind === "ai" && state.current_player === state.ai_player;
+        if (!state || activeSearch || state.searching || (state.status !== "ai_turn" && !retryingAi)) return;
+        activeSearch = true;
+        render();
+        try {
+          applyPayload(await request("/api/ai-turn", "POST", {}));
+        } catch (error) {
+          if (error.payload && error.payload.state) applyPayload(error.payload.state);
+          showToast(error.message);
+        } finally {
+          activeSearch = false;
+          render();
+        }
+      }
+
+      function maybeStartAi() {
+        if (state && state.status === "ai_turn" && !state.searching && !state.search_error && !activeSearch) {
+          startAiTurn();
+        }
+      }
+
+      $("hintButton").addEventListener("click", async () => {
+        if (!state || activeSearch || state.searching) return;
+        activeSearch = true;
+        render();
+        try {
+          applyPayload(await request("/api/hint", "POST", {}));
+        } catch (error) {
+          if (error.payload && error.payload.state) applyPayload(error.payload.state);
+          showToast(error.message);
+        } finally {
+          activeSearch = false;
+          render();
+        }
+      });
+
+      $("retryButton").addEventListener("click", () => startAiTurn());
+      $("resetButton").addEventListener("click", async () => {
+        if (activeSearch || (state && state.searching)) return;
+        try {
+          applyPayload(await request("/api/reset", "POST", {}));
+          showToast("Game reset.");
+          maybeStartAi();
+        } catch (error) {
+          if (error.payload && error.payload.state) applyPayload(error.payload.state);
+          showToast(error.message);
+        }
+      });
+
+      window.setInterval(() => {
+        if (activeSearch || (state && state.searching)) loadState();
+      }, 700);
+      loadState();
+    })();
+  </script>
+</body>
+</html>

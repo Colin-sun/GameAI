@@ -37,6 +37,29 @@ std::vector<std::vector<int>> meta_board_to_vector(
     return result;
 }
 
+py::dict search_tree_snapshot_to_dict(const SearchTreeSnapshot& snapshot) {
+    py::list nodes;
+    for (const auto& node : snapshot.nodes) {
+        py::dict item;
+        item["id"] = node.id;
+        item["parent_id"] = node.parent_id;
+        item["action"] = node.action;
+        item["visits"] = node.visits;
+        item["q"] = node.q;
+        item["u"] = node.u;
+        item["prior"] = node.prior;
+        item["value"] = node.value;
+        nodes.append(item);
+    }
+
+    py::dict result;
+    result["selected_action"] = snapshot.selected_action;
+    result["root_visits"] = snapshot.root_visits;
+    result["node_count"] = snapshot.node_count;
+    result["nodes"] = nodes;
+    return result;
+}
+
 int play_game(
     int n_playout_player_one,
     float c_puct_player_one,
@@ -136,8 +159,9 @@ std::tuple<float, float> compare_mcts(
 
 class PyMCTSPure {
 public:
-    PyMCTSPure(int n_playout, float c_puct, unsigned int seed)
-        : n_playout(n_playout), c_puct(c_puct), seed_rng(seed), engine(n_playout, c_puct, seed_rng) {
+    PyMCTSPure(int n_playout, float c_puct, unsigned int seed, bool capture_search_tree)
+        : n_playout(n_playout), c_puct(c_puct), seed_rng(seed),
+          engine(n_playout, c_puct, seed_rng, capture_search_tree) {
     }
 
     int get_move(const UltimateTicTacToe& game) {
@@ -147,7 +171,7 @@ public:
 
     int suggest_move(const UltimateTicTacToe& game) {
         std::mt19937 temp_rng(seed_rng());
-        MCTSPure<UltimateTicTacToe, ActionList> temp_engine(n_playout, c_puct, temp_rng);
+        MCTSPure<UltimateTicTacToe, ActionList> temp_engine(n_playout, c_puct, temp_rng, false);
         UltimateTicTacToe state = game;
         return temp_engine.get_move(state);
     }
@@ -158,6 +182,10 @@ public:
 
     void reset() {
         engine.update_with_move(-1);
+    }
+
+    SearchTreeSnapshot get_last_search_tree() const {
+        return engine.get_last_search_tree();
     }
 
 private:
@@ -232,12 +260,16 @@ PYBIND11_MODULE(gameai_native, m) {
         .def("get_step", &UltimateTicTacToe::get_step);
 
     py::class_<PyMCTSPure>(m, "MCTSPure")
-        .def(py::init<int, float, unsigned int>(),
+        .def(py::init<int, float, unsigned int, bool>(),
              py::arg("n_playout"),
              py::arg("c_puct"),
-             py::arg("seed") = std::random_device{}())
+             py::arg("seed") = std::random_device{}(),
+             py::arg("capture_search_tree") = false)
         .def("get_move", &PyMCTSPure::get_move)
         .def("suggest_move", &PyMCTSPure::suggest_move)
         .def("update_with_move", &PyMCTSPure::update_with_move)
-        .def("reset", &PyMCTSPure::reset);
+        .def("reset", &PyMCTSPure::reset)
+        .def("get_last_search_tree", [](const PyMCTSPure& engine) {
+            return search_tree_snapshot_to_dict(engine.get_last_search_tree());
+        });
 }

@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GameAI / Decision Tree</title>
+  <style>
+    :root {
+      --bg: #161817;
+      --surface: #1d211f;
+      --surface-strong: #242a27;
+      --ink: #e1ded4;
+      --muted: #7c847b;
+      --line: #3b423d;
+      --line-soft: #2b312d;
+      --red: #d55e42;
+      --green: #3fa08a;
+      --amber: #e9b44c;
+      --danger: #e07b61;
+      --serif: "Baskerville", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+    * { box-sizing: border-box; }
+    html { background: var(--bg); color-scheme: dark; }
+    body { margin: 0; min-width: 320px; background: var(--bg); color: var(--ink); font-family: var(--sans); line-height: 1.45; }
+    button, a { font: inherit; }
+    button { cursor: pointer; }
+    a { color: inherit; text-decoration: none; }
+    .app-shell { min-height: 100vh; }
+    .topbar {
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 25px 32px 20px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 28px;
+      border-bottom: 1px solid var(--line);
+    }
+    .brand { display: grid; gap: 3px; }
+    .eyebrow, .kicker, .micro-label {
+      color: var(--muted);
+      font: 11px/1.2 var(--mono);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    h1, h2, h3, p { margin: 0; }
+    h1 { color: var(--ink); font: 400 36px/1.02 var(--serif); }
+    h2 { color: var(--ink); font: 400 21px/1.1 var(--serif); }
+    h3 { color: var(--ink); font: 400 17px/1.15 var(--serif); }
+    .top-actions, .tree-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .action-button {
+      min-height: 36px;
+      padding: 8px 13px;
+      border: 1px solid var(--line);
+      border-radius: 2px;
+      background: transparent;
+      color: var(--ink);
+      font: 12px/1 var(--mono);
+      transition: border-color .16s ease, color .16s ease, background .16s ease;
+    }
+    .action-button:hover, .action-button:focus-visible { border-color: var(--amber); color: var(--amber); outline: none; }
+    .action-button.primary { border-color: var(--amber); color: var(--amber); }
+    .tree-layout {
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 30px 32px 46px;
+      display: grid;
+      grid-template-columns: 216px minmax(0, 1fr) 250px;
+      gap: 25px;
+      align-items: start;
+    }
+    .history-panel, .inspector-panel, .tree-panel { min-width: 0; border-top: 1px solid var(--line); }
+    .panel-heading { padding: 18px 0 15px; border-bottom: 1px solid var(--line); }
+    .panel-heading h2 { margin-top: 6px; }
+    .tree-history { display: grid; gap: 5px; padding-top: 10px; }
+    .tree-history-empty { padding-top: 12px; color: var(--muted); font-size: 13px; }
+    .history-item {
+      width: 100%;
+      padding: 10px 11px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      border: 1px solid transparent;
+      border-left: 2px solid var(--line);
+      background: transparent;
+      color: var(--ink);
+      text-align: left;
+    }
+    .history-item:hover, .history-item:focus-visible { border-color: var(--line); outline: none; }
+    .history-item.active { border-left-color: var(--amber); background: var(--surface); }
+    .history-item strong { color: var(--amber); font: 14px var(--mono); }
+    .history-item small { display: block; margin-top: 3px; color: var(--muted); font: 10px var(--mono); }
+    .history-item em { color: var(--muted); font: 10px var(--mono); font-style: normal; text-align: right; }
+    .tree-heading-line { display: flex; justify-content: space-between; align-items: end; gap: 15px; }
+    .tree-heading-meta { color: var(--muted); font: 11px var(--mono); text-align: right; }
+    .tree-viewport {
+      min-height: 470px;
+      margin-top: 15px;
+      overflow: auto;
+      border: 1px solid var(--line);
+      background: #191d1b;
+      scrollbar-color: var(--line) var(--bg);
+    }
+    .tree-viewport svg { display: block; min-width: 900px; }
+    .tree-empty { min-height: 470px; display: grid; place-items: center; padding: 40px; color: var(--muted); font: 12px var(--mono); text-align: center; }
+    .tree-edge { stroke: var(--line); stroke-width: 1.1; }
+    .tree-edge.path { stroke: var(--amber); stroke-width: 2; }
+    .tree-node { cursor: pointer; outline: none; }
+    .tree-node circle { fill: var(--surface); stroke: var(--line); stroke-width: 1.5; transition: fill .16s ease, stroke .16s ease; }
+    .tree-node:hover circle, .tree-node:focus-visible circle { fill: var(--surface-strong); stroke: var(--ink); }
+    .tree-node.root circle { fill: var(--amber); stroke: var(--amber); }
+    .tree-node.selected circle { stroke: var(--amber); stroke-width: 2.5; }
+    .tree-node.selected.root circle { fill: var(--amber); stroke: var(--ink); }
+    .tree-node text { pointer-events: none; text-anchor: middle; dominant-baseline: middle; }
+    .tree-node .node-action { fill: var(--ink); font: 10px var(--mono); }
+    .tree-node.root .node-action { fill: var(--bg); }
+    .tree-node .node-visits { fill: var(--muted); font: 9px var(--mono); transform: translateY(32px); }
+    .tree-node.root .node-visits { fill: var(--amber); }
+    .tree-caption { display: flex; justify-content: space-between; gap: 15px; margin-top: 10px; color: var(--muted); font: 11px var(--mono); }
+    .inspector-panel { padding-bottom: 18px; }
+    .inspector-empty { padding-top: 16px; color: var(--muted); font-size: 13px; }
+    .inspector-action { margin-top: 18px; color: var(--amber); font: 25px var(--mono); }
+    .inspector-subtitle { margin-top: 3px; color: var(--muted); font: 11px var(--mono); }
+    .inspection-grid { margin: 20px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 14px 12px; }
+    .inspection-grid dt { color: var(--muted); font: 10px var(--mono); text-transform: uppercase; }
+    .inspection-grid dd { margin: 3px 0 0; color: var(--ink); font: 13px var(--mono); overflow-wrap: anywhere; }
+    .inspector-rule { height: 1px; margin: 21px 0 17px; background: var(--line); }
+    .parameter-list { display: grid; gap: 9px; }
+    .parameter-row { display: flex; justify-content: space-between; gap: 10px; color: var(--muted); font: 11px var(--mono); }
+    .parameter-row strong { color: var(--ink); font-weight: 400; }
+    .expand-button { margin-top: 19px; width: 100%; }
+    .toast { position: fixed; right: 24px; bottom: 24px; max-width: min(360px, calc(100vw - 48px)); padding: 12px 14px; border: 1px solid var(--amber); background: var(--surface-strong); color: var(--ink); font: 12px/1.4 var(--mono); opacity: 0; pointer-events: none; transform: translateY(8px); transition: opacity .16s ease, transform .16s ease; }
+    .toast.visible { opacity: 1; transform: translateY(0); }
+    @media (max-width: 1100px) {
+      .tree-layout { grid-template-columns: 190px minmax(0, 1fr); }
+      .inspector-panel { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 0 30px; }
+      .inspector-panel .panel-heading { grid-column: 1 / -1; }
+      .inspector-panel .inspector-content { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 30px; }
+      .inspector-panel .inspector-rule { margin-top: 0; }
+    }
+    @media (max-width: 700px) {
+      .topbar { padding: 21px 20px 17px; display: block; }
+      h1 { font-size: 31px; }
+      .top-actions { margin-top: 17px; }
+      .tree-layout { display: block; padding: 22px 14px 35px; }
+      .history-panel { margin-bottom: 28px; }
+      .tree-history { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+      .inspector-panel { display: block; margin-top: 28px; }
+      .inspector-panel .inspector-content { display: block; }
+      .tree-heading-line { display: block; }
+      .tree-heading-meta { margin-top: 10px; text-align: left; }
+      .tree-viewport, .tree-empty { min-height: 390px; }
+      .tree-viewport svg { min-width: 760px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <span class="kicker">GameAI / search observatory</span>
+        <h1>Decision Tree</h1>
+      </div>
+      <nav class="top-actions" aria-label="Tree controls">
+        <a class="action-button primary" href="/">Back to board</a>
+      </nav>
+    </header>
+
+    <main class="tree-layout">
+      <aside class="history-panel" aria-labelledby="historyHeading">
+        <div class="panel-heading">
+          <span class="eyebrow">AI search record</span>
+          <h2 id="historyHeading">Turns</h2>
+        </div>
+        <div class="tree-history" id="treeHistory"></div>
+      </aside>
+
+      <section class="tree-panel" aria-labelledby="treeHeading">
+        <div class="panel-heading tree-heading-line">
+          <div>
+            <span class="eyebrow">Search topology</span>
+            <h2 id="treeHeading">Selected search</h2>
+          </div>
+          <div class="tree-heading-meta" id="treeMeta">NO TREE SELECTED</div>
+        </div>
+        <div class="tree-controls" style="margin-top: 14px">
+          <button class="action-button" id="resetViewButton" type="button">Reset view</button>
+          <button class="action-button" id="collapseButton" type="button">Collapse branches</button>
+        </div>
+        <div class="tree-viewport" id="treeViewport">
+          <div class="tree-empty" id="treeEmpty">Complete an AI turn on the board to inspect its search.</div>
+          <svg id="treeSvg" aria-label="MCTS decision tree" role="img"></svg>
+        </div>
+        <div class="tree-caption">
+          <span id="visibleReading">0 VISIBLE NODES</span>
+          <span>ROOT + HIGH-VISIT BRANCHES</span>
+        </div>
+      </section>
+
+      <aside class="inspector-panel" aria-labelledby="inspectorHeading">
+        <div class="panel-heading">
+          <span class="eyebrow">Node inspection</span>
+          <h2 id="inspectorHeading">Readout</h2>
+        </div>
+        <div class="inspector-content">
+          <div id="inspectorBody" class="inspector-body">
+            <p class="inspector-empty">Select a node to read its values.</p>
+          </div>
+        </div>
+      </aside>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      const MAX_VISIBLE = 200;
+      const $ = (id) => document.getElementById(id);
+      let state = null;
+      let tree = null;
+      let selectedId = 0;
+      let expanded = new Set();
+      let nodeById = new Map();
+      let childrenById = new Map();
+      let toastTimer = null;
+
+      const actionLabel = (action) => {
+        if (action === null || action === undefined || action < 0 || action >= 81) return "ROOT";
+        return String.fromCharCode(65 + (action % 9)) + String(9 - Math.floor(action / 9));
+      };
+      const number = (value, digits = 3) => Number(value || 0).toFixed(digits);
+      const integer = (value) => Number(value || 0).toLocaleString("en-US");
+
+      async function getJson(path) {
+        const response = await fetch(path);
+        const data = await response.json().catch(() => ({ error: "The server returned invalid JSON." }));
+        if (!response.ok) throw new Error(data.error || `Request failed (${response.status})`);
+        return data;
+      }
+
+      function showToast(message) {
+        const toast = $("toast");
+        toast.textContent = message;
+        toast.classList.add("visible");
+        window.clearTimeout(toastTimer);
+        toastTimer = window.setTimeout(() => toast.classList.remove("visible"), 3600);
+      }
+
+      function prepareTree(nextTree) {
+        tree = nextTree;
+        nodeById = new Map((tree.nodes || []).map((node) => [Number(node.id), node]));
+        childrenById = new Map();
+        (tree.nodes || []).forEach((node) => {
+          const parentId = Number(node.parent_id);
+          if (!childrenById.has(parentId)) childrenById.set(parentId, []);
+          childrenById.get(parentId).push(node);
+        });
+        expanded = new Set([0]);
+        sortedChildren(0).slice(0, 4).forEach((node) => expanded.add(Number(node.id)));
+        selectedId = 0;
+        renderAll();
+      }
+
+      function sortedChildren(parentId) {
+        return (childrenById.get(Number(parentId)) || []).slice().sort((left, right) => {
+          if (Number(left.visits) !== Number(right.visits)) return Number(right.visits) - Number(left.visits);
+          return Number(left.action) - Number(right.action);
+        });
+      }
+
+      function visibleNodes() {
+        const root = nodeById.get(0);
+        if (!root) return [];
+        const result = [root];
+        for (let index = 0; index < result.length && result.length < MAX_VISIBLE; index += 1) {
+          const parent = result[index];
+          if (!expanded.has(Number(parent.id))) continue;
+          for (const child of sortedChildren(parent.id)) {
+            if (result.length >= MAX_VISIBLE) break;
+            result.push(child);
+          }
+        }
+        return result;
+      }
+
+      function isSelectedPath(node) {
+        let current = node;
+        const seen = new Set();
+        while (current && !seen.has(Number(current.id))) {
+          if (Number(current.id) === selectedId) return true;
+          seen.add(Number(current.id));
+          current = nodeById.get(Number(current.parent_id));
+        }
+        return false;
+      }
+
+      function svgElement(name, attributes = {}) {
+        const element = document.createElementNS("http://www.w3.org/2000/svg", name);
+        Object.entries(attributes).forEach(([key, value]) => element.setAttribute(key, String(value)));
+        return element;
+      }
+
+      function renderTree() {
+        const svg = $("treeSvg");
+        const empty = $("treeEmpty");
+        if (!tree || !tree.nodes || !tree.nodes.length) {
+          svg.replaceChildren();
+          svg.style.display = "none";
+          empty.style.display = "grid";
+          $("visibleReading").textContent = "0 VISIBLE NODES";
+          return;
+        }
+        svg.style.display = "block";
+        empty.style.display = "none";
+        const visible = visibleNodes();
+        const visibleIds = new Set(visible.map((node) => Number(node.id)));
+        const levels = new Map();
+        const nodesByLevel = new Map();
+        visible.forEach((node) => {
+          const level = Number(node.parent_id) < 0 ? 0 : (levels.get(Number(node.parent_id)) || 0) + 1;
+          levels.set(Number(node.id), level);
+          if (!nodesByLevel.has(level)) nodesByLevel.set(level, []);
+          nodesByLevel.get(level).push(node);
+        });
+        const maxLevel = Math.max(...Array.from(nodesByLevel.keys()));
+        const maxCount = Math.max(...Array.from(nodesByLevel.values()).map((items) => items.length));
+        const width = Math.max(900, maxCount * 88 + 88);
+        const height = Math.max(300, (maxLevel + 1) * 112 + 70);
+        const positions = new Map();
+        nodesByLevel.forEach((nodes, level) => {
+          const gap = width / (nodes.length + 1);
+          nodes.forEach((node, index) => positions.set(Number(node.id), { x: gap * (index + 1), y: 46 + level * 112 }));
+        });
+        svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+        svg.setAttribute("width", width);
+        svg.setAttribute("height", height);
+        svg.replaceChildren();
+
+        visible.forEach((node) => {
+          const parent = nodeById.get(Number(node.parent_id));
+          if (!parent || !visibleIds.has(Number(parent.id))) return;
+          const from = positions.get(Number(parent.id));
+          const to = positions.get(Number(node.id));
+          const edge = svgElement("line", { x1: from.x, y1: from.y, x2: to.x, y2: to.y, class: selectedId !== 0 && isSelectedPath(node) && isSelectedPath(parent) ? "tree-edge path" : "tree-edge" });
+          svg.appendChild(edge);
+        });
+
+        visible.forEach((node) => {
+          const id = Number(node.id);
+          const position = positions.get(id);
+          const group = svgElement("g", { class: `tree-node${id === 0 ? " root" : ""}${id === selectedId ? " selected" : ""}`, tabindex: 0, role: "button", "aria-label": `${actionLabel(node.action)}, ${integer(node.visits)} visits` });
+          group.addEventListener("click", () => { selectedId = id; renderAll(); });
+          group.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" || event.key === " ") { event.preventDefault(); selectedId = id; renderAll(); }
+          });
+          const circle = svgElement("circle", { cx: position.x, cy: position.y, r: 21 });
+          const action = svgElement("text", { x: position.x, y: position.y, class: "node-action" });
+          action.textContent = actionLabel(node.action);
+          const visits = svgElement("text", { x: position.x, y: position.y, class: "node-visits" });
+          visits.textContent = `${integer(node.visits)}v`;
+          const title = svgElement("title");
+          title.textContent = `${actionLabel(node.action)} / ${integer(node.visits)} visits / value ${number(node.value)}`;
+          group.append(circle, action, visits, title);
+          svg.appendChild(group);
+        });
+        $("visibleReading").textContent = `${visible.length} VISIBLE NODES${tree.node_count > MAX_VISIBLE ? ` / ${integer(tree.node_count)} TOTAL` : ""}`;
+      }
+
+      function setText(id, value) { $(id).textContent = value; }
+
+      function renderInspector() {
+        const body = $("inspectorBody");
+        body.replaceChildren();
+        const node = nodeById.get(selectedId);
+        if (!tree || !node) {
+          const empty = document.createElement("p");
+          empty.className = "inspector-empty";
+          empty.textContent = "Select a node to read its values.";
+          body.appendChild(empty);
+          return;
+        }
+        const action = document.createElement("div");
+        action.className = "inspector-action";
+        action.textContent = actionLabel(node.action);
+        const subtitle = document.createElement("div");
+        subtitle.className = "inspector-subtitle";
+        subtitle.textContent = node.id === 0 ? "root position" : `node ${node.id} / parent ${node.parent_id}`;
+        const grid = document.createElement("dl");
+        grid.className = "inspection-grid";
+        const rootVisits = Number(tree.root_visits || 0);
+        const fields = [
+          ["Visits", integer(node.visits)],
+          ["Share", `${rootVisits ? (Number(node.visits) / rootVisits * 100).toFixed(1) : "0.0"}%`],
+          ["Q", number(node.q)],
+          ["U", number(node.u)],
+          ["Value", number(node.value)],
+          ["Prior", number(node.prior)],
+          ["Children", integer((childrenById.get(Number(node.id)) || []).length)],
+          ["Parent", node.parent_id < 0 ? "--" : actionLabel(nodeById.get(Number(node.parent_id))?.action)],
+        ];
+        fields.forEach(([label, value]) => {
+          const wrapper = document.createElement("div");
+          const term = document.createElement("dt"); term.textContent = label;
+          const detail = document.createElement("dd"); detail.textContent = value;
+          wrapper.append(term, detail); grid.appendChild(wrapper);
+        });
+        const rule = document.createElement("div"); rule.className = "inspector-rule";
+        const parameterTitle = document.createElement("h3"); parameterTitle.textContent = "Search parameters";
+        const parameters = document.createElement("div"); parameters.className = "parameter-list";
+        [["Playouts", integer(tree.n_playout)], ["c_puct", number(tree.c_puct)], ["Root visits", integer(tree.root_visits)], ["Selected", actionLabel(tree.selected_action)]].forEach(([label, value]) => {
+          const row = document.createElement("div"); row.className = "parameter-row";
+          const key = document.createElement("span"); key.textContent = label;
+          const detail = document.createElement("strong"); detail.textContent = value;
+          row.append(key, detail); parameters.appendChild(row);
+        });
+        const expand = document.createElement("button");
+        expand.type = "button";
+        expand.className = "action-button expand-button";
+        const hasChildren = (childrenById.get(Number(node.id)) || []).length > 0;
+        expand.disabled = !hasChildren;
+        expand.textContent = expanded.has(Number(node.id)) ? "Collapse this branch" : "Expand this branch";
+        expand.addEventListener("click", () => {
+          if (expanded.has(Number(node.id))) expanded.delete(Number(node.id));
+          else expanded.add(Number(node.id));
+          renderAll();
+        });
+        body.append(action, subtitle, grid, rule, parameterTitle, parameters, expand);
+      }
+
+      function renderHistory() {
+        const list = $("treeHistory");
+        list.replaceChildren();
+        const history = state?.tree_history || [];
+        if (!history.length) {
+          const empty = document.createElement("p");
+          empty.className = "tree-history-empty";
+          empty.textContent = "No AI searches yet.";
+          list.appendChild(empty);
+          return;
+        }
+        history.slice().reverse().forEach((entry) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = `history-item${tree && Number(tree.id) === Number(entry.id) ? " active" : ""}`;
+          const text = document.createElement("span");
+          const move = document.createElement("strong"); move.textContent = entry.action_label;
+          const small = document.createElement("small"); small.textContent = `SEARCH ${String(entry.id).padStart(2, "0")} / STEP ${String(entry.step).padStart(2, "0")}`;
+          text.append(move, small);
+          const stats = document.createElement("em"); stats.textContent = `${Number(entry.node_count).toLocaleString("en-US")} nodes`;
+          button.append(text, stats);
+          button.addEventListener("click", () => loadTree(Number(entry.id)));
+          list.appendChild(button);
+        });
+      }
+
+      function renderAll() {
+        renderHistory();
+        renderTree();
+        renderInspector();
+        if (tree) {
+          setText("treeMeta", `SEARCH ${String(tree.id).padStart(2, "0")} / MOVE ${tree.action_label} / STEP ${String(tree.step).padStart(2, "0")}`);
+        } else {
+          setText("treeMeta", "NO TREE SELECTED");
+        }
+      }
+
+      async function loadTree(id) {
+        try {
+          prepareTree(await getJson(`/api/trees/${id}`));
+          const url = new URL(window.location.href);
+          url.searchParams.set("tree", id);
+          window.history.replaceState({}, "", url);
+        } catch (error) {
+          showToast(error.message);
+        }
+      }
+
+      $("resetViewButton").addEventListener("click", () => {
+        if (!tree) return;
+        expanded = new Set([0]);
+        sortedChildren(0).slice(0, 4).forEach((node) => expanded.add(Number(node.id)));
+        renderAll();
+      });
+      $("collapseButton").addEventListener("click", () => {
+        if (!tree) return;
+        expanded = new Set([0]);
+        renderAll();
+      });
+
+      async function init() {
+        try {
+          const payload = await getJson("/api/state");
+          state = payload.state || payload;
+          renderAll();
+          const requested = Number(new URLSearchParams(window.location.search).get("tree"));
+          const latest = state.tree_history && state.tree_history.length ? state.tree_history[state.tree_history.length - 1].id : null;
+          const id = Number.isInteger(requested) && requested > 0 ? requested : latest;
+          if (id) await loadTree(id);
+        } catch (error) {
+          showToast(error.message);
+        }
+      }
+
+      window.setInterval(async () => {
+        try {
+          const payload = await getJson("/api/state");
+          state = payload.state || payload;
+          renderHistory();
+        } catch (_error) {
+          return;
+        }
+      }, 1800);
+      init();
+    })();
+  </script>
+</body>
+</html>

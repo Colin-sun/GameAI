@@ -1,6 +1,6 @@
 # Torch AlphaZero 实验记录
 
-本文只记录 `majority-utt-v1` 规则下、使用 CUDA Torch 网络和 native-prior 搜索的最终实验。meta 棋盘三连线不参与胜负。
+本文只记录 `majority-utt-v1` 规则下、使用 Torch 网络和 native-prior 搜索的最终实验。meta 棋盘三连线不参与胜负。
 
 ## 规则
 
@@ -27,6 +27,7 @@
 | final loss | policy `0.3808`，value `0.0621` |
 
 训练使用多进程 CPU 生成 native tactical teacher 数据，GPU 只负责 Torch batch 训练。checkpoint 的 rule metadata 为 `majority-utt-v1`。
+最终 40 局 validation 使用同一 checkpoint，在 32 个 CPU worker 中并行运行；每个 worker 的 Torch 推理和 native MCTS 均限制为单线程。
 
 ## 最终搜索参数
 
@@ -48,15 +49,32 @@ root_selection=q
 
 ## 棋力评测
 
-双方各执先手，W-D-L 从 candidate 视角统计。以下两批 seed 在参数确定后独立运行，逐局记录保存在 JSON 中：
+双方各执先手，W-D-L 从 candidate 视角统计。最终 validation 使用 10 个 seed、每个 seed 双方各一局，共 40 局；逐局记录保存在 [`alphazero_torch_native_prior_teacher6000_512_hard_rootq_48000_parallel_40_cpu.json`](alphazero_torch_native_prior_teacher6000_512_hard_rootq_48000_parallel_40_cpu.json) 中：
 
 | 评测批次 | 对局 | W-D-L | 严格胜率 | 得分率 |
 | --- | ---: | ---: | ---: | ---: |
-| `...hard_rootq_48000_independent_20.json` | 20 | 18-2-0 | 90.00% | 95.00% |
-| `...hard_rootq_48000_independent2_20.json` | 20 | 15-5-0 | 75.00% | 87.50% |
-| 合计 | 40 | 33-7-0 | **82.50%** | **91.25%** |
+| CPU worker validation | 40 | 32-7-1 | **80.00%** | **88.75%** |
 
-合计严格胜率的 Wilson 95% 区间为 `68.05%–91.25%`。因此当前数据支持“point estimate 超过 80%”，但不支持把 90% 宣称为稳定总体水平；单批最高为 90%。最终 aggregate 数据见 [`alphazero_torch_final_eval.json`](alphazero_torch_final_eval.json)。
+严格胜率的 Wilson 95% 区间为 `65.24%–89.50%`。因此当前 40 局数据的点估计达到 80%，但仍不能把 80% 视为稳定总体水平；majority 规则下和棋也应单独报告。
+
+### 降低 simulations 的完整验证
+
+为评估降低搜索预算的实际收益，使用同一个 hard checkpoint、同一组 10 个 seed、每组双方各 20 局，运行了完整的 8 组矩阵，共 320 局。所有 native-prior 配置均固定为 `c_puct=0.2`、`policy_exponent=0.5`、`rollout_limit=32`、`root_selection=q`；tactical 对手固定为 `3000 / c_puct=0.3 / tactical / 32`。高低参数对战中，表格的 candidate 始终是 `48000`。
+
+| 对战 | 对局 | W-D-L | 严格胜率 | 得分率 |
+| --- | ---: | ---: | ---: | ---: |
+| `24000` vs tactical `3000` | 40 | 30-9-1 | 75.00% | **86.25%** |
+| `12000` vs tactical `3000` | 40 | 32-8-0 | **80.00%** | **90.00%** |
+| `6000` vs tactical `3000` | 40 | 23-13-4 | 57.50% | 73.75% |
+| `3000` vs tactical `3000` | 40 | 20-14-6 | 50.00% | 67.50% |
+| `48000` vs `24000` | 40 | 13-26-1 | 32.50% | 65.00% |
+| `48000` vs `12000` | 40 | 14-23-3 | 35.00% | 63.75% |
+| `48000` vs `6000` | 40 | 24-16-0 | 60.00% | 80.00% |
+| `48000` vs `3000` | 40 | 29-10-1 | 72.50% | 85.00% |
+
+W-D-L 和严格胜率均从 candidate 视角统计；高低参数组的 candidate 是 `48000`。各组严格胜率的 Wilson 95% 区间、每局 seed 和完整走子记录见 [`alphazero_torch_step_reduction_parallel_8x40_cpu.json`](alphazero_torch_step_reduction_parallel_8x40_cpu.json)。本次 32 worker CPU 批次墙钟时间为约 `537.6 s`。
+
+结论是：`12000` 在对 tactical 的完整验证中达到了与 `48000` 当前基准相同的 80% 严格胜率，同时走子时间约降至四分之一；`6000` 延迟更低但棋力明显下降。`48000` 对 `6000/3000` 的得分优势较清楚，但对 `24000/12000` 主要表现为更多和棋，不能据此宣称 simulations 越高棋力必然越强。
 
 ## 复现
 
@@ -72,19 +90,30 @@ python scripts/train_alphazero_torch.py \
   --self-play-games 0 --warmup-epochs 8 --epochs 12 --batch-size 1024
 ```
 
-最终评测：
+最终 40 局并行评测：
 
 ```shell
-python scripts/evaluate_alphazero_torch.py \
+python scripts/evaluate_alphazero_torch_parallel.py \
   --model models/alphazero/utt_majority_v1_torch_teacher6000_512_hard.pt \
-  --device cuda --games-per-side 2 \
-  --seeds 20260900,20260901,20260902,20260903,20260904 \
-  --neural-simulations 48000 --neural-c-puct 0.2 \
-  --candidate-mode native-prior --tactical-prior-weight 0 \
-  --rollout-value-weight 0 --rollout-limit 32 --policy-exponent 0.5 \
-  --no-force-tactical --native-root-selection q \
+  --workers 32 --games-per-side 2 \
+  --seeds 20260900,20260901,20260902,20260903,20260904,20260905,20260906,20260907,20260908,20260909 \
+  --simulations 48000 --c-puct 0.2 \
+  --rollout-limit 32 --policy-exponent 0.5 \
   --baseline-n-playout 3000 --baseline-c-puct 0.3 \
-  --output-json docs/dev/analysis/alphazero_torch_native_prior_teacher6000_512_hard_rootq_48000_independent_20.json
+  --output-json docs/dev/analysis/alphazero_torch_native_prior_teacher6000_512_hard_rootq_48000_parallel_40_cpu.json
+```
+
+完整降档矩阵：
+
+```shell
+python scripts/evaluate_alphazero_torch_matrix_parallel.py \
+  --model models/alphazero/utt_majority_v1_torch_teacher6000_512_hard.pt \
+  --workers 32 --games-per-side 2 \
+  --seeds 20260900,20260901,20260902,20260903,20260904,20260905,20260906,20260907,20260908,20260909 \
+  --low-simulations 24000,12000,6000,3000 --high-simulations 48000 \
+  --c-puct 0.2 --policy-exponent 0.5 --rollout-limit 32 \
+  --tactical-n-playout 3000 --tactical-c-puct 0.3 --tactical-rollout-limit 32 \
+  --output-json docs/dev/analysis/alphazero_torch_step_reduction_parallel_8x40_cpu.json
 ```
 
 该模型仍是实验旁路；Android 默认入口继续使用 native tactical MCTS。若要把网络作为生产默认，还需要更大规模、覆盖不同阶段局面的独立评测。

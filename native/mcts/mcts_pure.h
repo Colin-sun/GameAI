@@ -124,6 +124,44 @@ private:
         return snapshot;
     }
 
+    int search_move(Game& state, bool select_by_q = false) {
+        for (int n = 0; n < _n_playout; ++n) {
+            Game state_copy = *(state.clone());
+            _playout(state_copy);
+        }
+
+        if (_root->_children.empty()) {
+            if (_capture_search_tree) {
+                _last_search_tree = build_search_tree_snapshot(-1);
+            } else {
+                _last_search_tree = SearchTreeSnapshot{};
+            }
+            return -1;
+        }
+
+        auto best_child = std::max_element(
+            _root->_children.begin(),
+            _root->_children.end(),
+            [select_by_q](const auto& a, const auto& b) {
+                if (select_by_q && a.second->_Q != b.second->_Q) {
+                    return a.second->_Q < b.second->_Q;
+                }
+                if (a.second->_n_visits != b.second->_n_visits) {
+                    return a.second->_n_visits < b.second->_n_visits;
+                }
+                return a.first > b.first;
+            }
+        );
+        int best_move = best_child->first;
+        if (_capture_search_tree) {
+            _last_search_tree = build_search_tree_snapshot(best_move);
+        } else {
+            _last_search_tree = SearchTreeSnapshot{};
+        }
+        update_with_move(best_move);
+        return best_move;
+    }
+
 public:
     // constructor
     // Inputs:
@@ -229,42 +267,84 @@ public:
         if (state.get_done_winner().first || state.get_valid_actions().size() == 0) {
             return -1;
         }
+        return search_move(state);
+    }
 
-        for (int n = 0; n < _n_playout; ++n) {
-            Game state_copy = *(state.clone());
-            _playout(state_copy);
+    int get_move_with_priors(
+        Game& state,
+        const std::vector<float>& action_priors,
+        const std::vector<int>& allowed_actions = {},
+        bool select_by_q = false) {
+        if (state.get_done_winner().first || state.get_valid_actions().size() == 0) {
+            return -1;
+        }
+        if (action_priors.empty()) {
+            throw std::invalid_argument("action_priors must not be empty");
+        }
+
+        const auto legal_actions = state.get_valid_actions();
+        ActionList actions;
+        for (int index = 0; index < legal_actions.size(); ++index) {
+            const int action = legal_actions[index];
+            if (allowed_actions.empty() ||
+                std::find(allowed_actions.begin(), allowed_actions.end(), action) !=
+                    allowed_actions.end()) {
+                actions.emplace_back(action);
+            }
+        }
+        if (actions.size() == 0) {
+            throw std::invalid_argument("allowed_actions does not contain a legal action");
+        }
+        std::vector<float> priors;
+        priors.reserve(actions.size());
+        float total = 0.0f;
+        for (int index = 0; index < actions.size(); ++index) {
+            const int action = actions[index];
+            if (action < 0 || static_cast<size_t>(action) >= action_priors.size()) {
+                throw std::invalid_argument("action_priors does not cover a legal action");
+            }
+            const float prior = std::isfinite(action_priors[action])
+                ? std::max(0.0f, action_priors[action])
+                : 0.0f;
+            priors.push_back(prior);
+            total += prior;
+        }
+        if (total <= 0.0f) {
+            const float uniform = 1.0f / static_cast<float>(actions.size());
+            std::fill(priors.begin(), priors.end(), uniform);
+        } else {
+            for (float& prior : priors) {
+                prior /= total;
+            }
+        }
+
+        if (!_root->_children.empty() && !allowed_actions.empty()) {
+            for (auto iterator = _root->_children.begin(); iterator != _root->_children.end();) {
+                if (std::find(allowed_actions.begin(), allowed_actions.end(), iterator->first) ==
+                    allowed_actions.end()) {
+                    iterator = _root->_children.erase(iterator);
+                } else {
+                    ++iterator;
+                }
+            }
         }
 
         if (_root->_children.empty()) {
-            if (_capture_search_tree) {
-                _last_search_tree = build_search_tree_snapshot(-1);
-            } else {
-                _last_search_tree = SearchTreeSnapshot{};
-            }
-            return -1;
-        }
-
-        auto best_child = std::max_element(
-            _root->_children.begin(),
-            _root->_children.end(),
-            [](const auto& a, const auto& b) {
-                if (a.second->_n_visits != b.second->_n_visits) {
-                    return a.second->_n_visits < b.second->_n_visits;
-                }
-                return a.first > b.first;
-            }
-        );
-        int best_move = best_child->first;
-
-        // Capture the complete tree before moving root to the selected child.
-        if (_capture_search_tree) {
-            _last_search_tree = build_search_tree_snapshot(best_move);
+            _root->expand(actions, priors);
         } else {
-            _last_search_tree = SearchTreeSnapshot{};
+            for (int index = 0; index < actions.size(); ++index) {
+                auto child = _root->_children.find(actions[index]);
+                if (child != _root->_children.end()) {
+                    child->second->prior_p = priors[index];
+                } else {
+                    ActionList single_action;
+                    single_action.emplace_back(actions[index]);
+                    std::vector<float> single_prior{priors[index]};
+                    _root->expand(single_action, single_prior);
+                }
+            }
         }
-        update_with_move(best_move); // reuse the subtree for the chosen move
-
-        return best_move;
+        return search_move(state, select_by_q);
     }
 
     SearchTreeSnapshot get_last_search_tree() const {

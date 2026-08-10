@@ -9,5 +9,7 @@ description = "Python scripts for GameAI tooling and browser human play"
 requires-python = ">=3.13"
 dependencies = [
     "json5>=0.9",
+    "numpy>=2.0",
     "optuna>=4.5",
+    "torch>=2.13",
 ]

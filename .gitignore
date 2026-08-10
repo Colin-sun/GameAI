@@ -5,6 +5,8 @@ __pycache__
 gameai_native*.so
 gameai_native*.pyd
 
+models/
+
 *.iml
 .gradle
 .git/

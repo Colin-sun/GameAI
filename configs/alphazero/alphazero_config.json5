@@ -1,0 +1,40 @@
+{
+    // Optional experiment. The native tactical MCTS remains the default player.
+    "rule_version": "majority-utt-v1",
+    "checkpoint": "models/alphazero/utt_majority_v1.npz",
+    "model": {
+        "hidden_size": 128,
+        "learning_rate": 0.002,
+        "weight_decay": 0.0001
+    },
+    "warm_start": {
+        "teacher_games": 40,
+        "teacher_playout": 128,
+        "teacher_c_puct": 0.3,
+        "rollout_policy": "tactical",
+        "rollout_limit": 32
+    },
+    "self_play": {
+        "iterations": 2,
+        "games_per_iteration": 8,
+        "simulations": 96,
+        "c_puct": 0.3,
+        "tactical_prior_weight": 0.5,
+        "rollout_value_weight": 0.5,
+        "rollout_limit": 32,
+        "temperature_moves": 12,
+        "dirichlet_alpha": 0.3,
+        "dirichlet_epsilon": 0.25
+    },
+    "evaluation": {
+        "simulations": 64,
+        "c_puct": 0.3,
+        "tactical_prior_weight": 0.25,
+        "rollout_value_weight": 0.25,
+        "rollout_limit": 32,
+        "baseline_n_playout": 3000,
+        "baseline_c_puct": 0.3,
+        "baseline_rollout_policy": "tactical",
+        "baseline_rollout_limit": 32
+    }
+}

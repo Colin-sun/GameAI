@@ -300,6 +300,15 @@ public:
         return engine.get_move(state);
     }
 
+    int get_move_with_priors(
+        const UltimateTicTacToe& game,
+        const std::vector<float>& action_priors,
+        const std::vector<int>& allowed_actions,
+        bool select_by_q) {
+        UltimateTicTacToe state = game;
+        return engine.get_move_with_priors(state, action_priors, allowed_actions, select_by_q);
+    }
+
     int suggest_move(const UltimateTicTacToe& game) {
         std::mt19937 temp_rng(seed_rng());
         MCTSPure<UltimateTicTacToe, ActionList> temp_engine(
@@ -436,6 +445,13 @@ PYBIND11_MODULE(gameai_native, m) {
              py::arg("rollout_policy") = 1,
              py::arg("rollout_limit") = 32)
         .def("get_move", &PyMCTSPure::get_move)
+        .def(
+            "get_move_with_priors",
+            &PyMCTSPure::get_move_with_priors,
+            py::arg("game"),
+            py::arg("action_priors"),
+            py::arg("allowed_actions") = std::vector<int>{},
+            py::arg("select_by_q") = false)
         .def("suggest_move", &PyMCTSPure::suggest_move)
         .def("update_with_move", &PyMCTSPure::update_with_move)
         .def("reset", &PyMCTSPure::reset)

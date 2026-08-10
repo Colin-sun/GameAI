@@ -1,0 +1,44 @@
+// Reproducible GPU/CPU AlphaZero experiment for majority-utt-v1.
+{
+    "rule_version": "majority-utt-v1",
+    "network": {
+        "channels": 128,
+        "blocks": 8,
+    },
+    "hardware": {
+        "device": "cuda",
+        "cpu_workers": 32,
+    },
+    "teacher": {
+        "games": 512,
+        "playout": 3000,
+        "c_puct": 0.3,
+        "tree_value_weight": 0.0,
+    },
+    "self_play": {
+        "games": 128,
+        "simulations": 128,
+        "c_puct": 0.3,
+        "tactical_prior_weight": 0.2,
+        "rollout_value_weight": 0.1,
+        "rollout_limit": 32,
+        "force_tactical": true,
+    },
+    "train": {
+        "warmup_epochs": 8,
+        "epochs": 12,
+        "batch_size": 1024,
+        "learning_rate": 0.001,
+        "weight_decay": 0.0001,
+    },
+    "evaluation": {
+        "neural_simulations": 512,
+        "neural_c_puct": 0.3,
+        "tactical_prior_weight": 0.5,
+        "rollout_value_weight": 0.25,
+        "rollout_limit": 32,
+        "force_tactical": true,
+        "baseline_n_playout": 3000,
+        "baseline_c_puct": 0.3,
+    },
+}

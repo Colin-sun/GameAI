@@ -5,7 +5,7 @@
 - `app/src/main/cpp/CMakeLists.txt`: Android JNI 入口，内部把 `native/` 作为子目录引入。
 - `native/core/`: 共用棋类逻辑和 MCTS。
 - `native/python/`: `pybind11` 绑定，导出 `gameai_native` 模块给 Python 脚本调用。
-- `scripts/`: benchmark、调参和浏览器 humanplay 的统一 Python 入口；网页资源位于 `scripts/web/`。
+- `scripts/`: 按功能组织的 Python 工具入口，包含 `mcts/`、`alphazero/` 和 `humanplay/`；网页资源位于 `scripts/humanplay/web/`。
 - 根目录 `pyproject.toml`: Python 直接依赖清单。
 
 ## 推荐环境
@@ -28,16 +28,16 @@ cmake --build build/native -j
 
 ## 验证顺序
 优先验证这三条路径：
-- `python ./scripts/decide_params.py --trials 1 --games-per-side 1`
-- `python ./scripts/benchmark.py --config ./configs/benchmark/benchmark_config.json5`
-- `python ./scripts/humanplay.py start --config ./configs/humanplay/humanplay_config.json5`
-- `python ./scripts/humanplay.py stop`
+- `python -m scripts.mcts.decide_params --trials 1 --games-per-side 1`
+- `python -m scripts.mcts.benchmark --config ./configs/benchmark/benchmark_config.json5`
+- `python -m scripts.humanplay.server start --config ./configs/humanplay/humanplay_config.json5`
+- `python -m scripts.humanplay.server stop`
 - `cmake -S native -B build/native -DLINUX_BUILD=ON -DENABLE_MCTS_PURE=ON -DENABLE_PYTHON_BINDINGS=ON`
 
 ## 代码约定
 - MCTS 相关代码放在 `native/core/MCTS/`，复用树时要避免父子 `shared_ptr` 引用环。
-- Python humanplay 服务只放在 `scripts/`，网页资源放在 `scripts/web/`，核心博弈和搜索逻辑仍保持在 `native/core/`。
-- benchmark 和调参也统一放在 `scripts/`，不要再新增 `native/tools/` 或 `native/benchmark/` 入口。
+- Python humanplay 服务放在 `scripts/humanplay/`，网页资源放在 `scripts/humanplay/web/`，核心博弈和搜索逻辑仍保持在 `native/core/`。
+- benchmark 和调参放在 `scripts/mcts/`，AlphaZero 训练和评测放在 `scripts/alphazero/`，不要再新增 `native/tools/` 或 `native/benchmark/` 入口。
 - Android 只维护 JNI 包装层，不在这里放 Linux 调试逻辑。
 
 `scripts.humanplay.HumanPlayServerController` 在后台线程管理 HTTP 服务，支持幂等 `start()`、`stop()` 和重新启动；CLI 也通过该控制器保持服务运行。

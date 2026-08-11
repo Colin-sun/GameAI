@@ -61,7 +61,7 @@ n_playout      = 3000（benchmark）或 2000（humanplay）
 命令：
 
 ```shell
-python scripts/evaluate_mcts.py \
+python -m scripts.mcts.evaluate_mcts \
   --candidate-n-playout 3000 --candidate-c-puct 0.4 \
   --candidate-rollout-policy tactical --candidate-rollout-limit 32 \
   --baseline-n-playout 3000 --baseline-c-puct 0.8 \
@@ -122,9 +122,9 @@ python scripts/evaluate_mcts.py \
 ```shell
 cmake --build build/native -j2
 python -m unittest discover -s tests -v
-python -m py_compile scripts/common.py scripts/benchmark.py scripts/decide_params.py scripts/evaluate_mcts.py scripts/humanplay.py
-python scripts/benchmark.py --config configs/benchmark/benchmark_config.json5 --runs 3 --seed 20260809
-python scripts/decide_params.py --trials 1 --games-per-side 1 --seed 20260830
+python -m py_compile scripts/common.py scripts/mcts/benchmark.py scripts/mcts/decide_params.py scripts/mcts/evaluate_mcts.py scripts/humanplay/server.py
+python -m scripts.mcts.benchmark --config configs/benchmark/benchmark_config.json5 --runs 3 --seed 20260809
+python -m scripts.mcts.decide_params --trials 1 --games-per-side 1 --seed 20260830
 git diff --check
 ```
 

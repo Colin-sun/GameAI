@@ -30,7 +30,7 @@ PLAYER_TWO = 2
 
 
 def repo_root() -> Path:
-    return Path(__file__).resolve().parents[1]
+    return Path(__file__).resolve().parents[2]
 
 
 def load_native_module(module_dir: Path):

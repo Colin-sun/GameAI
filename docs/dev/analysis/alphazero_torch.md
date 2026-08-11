@@ -81,7 +81,7 @@ W-D-L 和严格胜率均从 candidate 视角统计；高低参数组的 candidat
 训练 hard checkpoint：
 
 ```shell
-python scripts/train_alphazero_torch.py \
+python -m scripts.alphazero.train_torch \
   --output models/alphazero/utt_majority_v1_torch_teacher6000_512_hard.pt \
   --resume models/alphazero/utt_majority_v1_torch_teacher6000_512.pt \
   --device cuda --channels 128 --blocks 8 --workers 32 \
@@ -93,7 +93,7 @@ python scripts/train_alphazero_torch.py \
 最终 40 局并行评测：
 
 ```shell
-python scripts/evaluate_alphazero_torch_parallel.py \
+python -m scripts.alphazero.evaluate_torch_parallel \
   --model models/alphazero/utt_majority_v1_torch_teacher6000_512_hard.pt \
   --workers 32 --games-per-side 2 \
   --seeds 20260900,20260901,20260902,20260903,20260904,20260905,20260906,20260907,20260908,20260909 \
@@ -106,7 +106,7 @@ python scripts/evaluate_alphazero_torch_parallel.py \
 完整降档矩阵：
 
 ```shell
-python scripts/evaluate_alphazero_torch_matrix_parallel.py \
+python -m scripts.alphazero.evaluate_torch_matrix_parallel \
   --model models/alphazero/utt_majority_v1_torch_teacher6000_512_hard.pt \
   --workers 32 --games-per-side 2 \
   --seeds 20260900,20260901,20260902,20260903,20260904,20260905,20260906,20260907,20260908,20260909 \

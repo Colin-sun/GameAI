@@ -5,10 +5,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
-from alphazero import NeuralSearchConfig, PolicyValueNetwork, evaluate_model_against_mcts
-from common import load_native_module, repo_root
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from scripts.alphazero import NeuralSearchConfig, PolicyValueNetwork, evaluate_model_against_mcts
+from scripts.common import load_native_module, repo_root
 
 
 def parse_seeds(value: str) -> list[int]:

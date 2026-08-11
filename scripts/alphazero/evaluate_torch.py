@@ -6,18 +6,17 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import sys
 from pathlib import Path
 
 import torch
 
-try:
-    from alphazero import NeuralSearchConfig
-    from alphazero_torch import TorchPolicyValueNetwork, evaluate_torch_model
-    from common import load_native_module, repo_root
-except ImportError:  # pragma: no cover - supports package-style invocation
-    from scripts.alphazero import NeuralSearchConfig
-    from scripts.alphazero_torch import TorchPolicyValueNetwork, evaluate_torch_model
-    from scripts.common import load_native_module, repo_root
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from scripts.alphazero import NeuralSearchConfig
+from scripts.alphazero.torch_impl import TorchPolicyValueNetwork, evaluate_torch_model
+from scripts.common import load_native_module, repo_root
 
 
 def parse_seeds(value: str) -> list[int]:

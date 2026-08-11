@@ -10,35 +10,26 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 import tempfile
 from pathlib import Path
 
 import torch
 
-try:
-    from alphazero import NeuralSearchConfig
-    from alphazero_torch import (
-        TorchPolicyValueNetwork,
-        augment_symmetries,
-        combine_game_data,
-        generate_neural_self_play_data,
-        generate_teacher_data,
-        sharpen_policy_targets,
-        train_network,
-    )
-    from common import repo_root
-except ImportError:  # pragma: no cover - supports package-style invocation
-    from scripts.alphazero import NeuralSearchConfig
-    from scripts.alphazero_torch import (
-        TorchPolicyValueNetwork,
-        augment_symmetries,
-        combine_game_data,
-        generate_neural_self_play_data,
-        generate_teacher_data,
-        sharpen_policy_targets,
-        train_network,
-    )
-    from scripts.common import repo_root
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from scripts.alphazero import NeuralSearchConfig
+from scripts.alphazero.torch_impl import (
+    TorchPolicyValueNetwork,
+    augment_symmetries,
+    combine_game_data,
+    generate_neural_self_play_data,
+    generate_teacher_data,
+    sharpen_policy_targets,
+    train_network,
+)
+from scripts.common import repo_root
 
 
 def parse_args() -> argparse.Namespace:

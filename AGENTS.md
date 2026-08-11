@@ -7,10 +7,10 @@ This repository is an Android app with a native C++ game engine. The main app li
 - By default, only run python & cpp test and do not modify Kotlin and java code
 - `python -m pip install .`: install Python dependencies and build the `gameai_native` binding for Python tools.
 - `cmake -S native -B build/native -DLINUX_BUILD=ON -DENABLE_MCTS_PURE=ON -DENABLE_PYTHON_BINDINGS=ON -DCMAKE_BUILD_TYPE=Release` then `cmake --build build/native -j`: build the native C++ core plus Python bindings from `native/`, with all artifacts kept under the repo-root `build/`.
-- `python scripts/decide_params.py --trials 10 --games-per-side 2`: run Optuna-based MCTS tuning through the Python bindings.
-- `python scripts/benchmark.py --config configs/benchmark/benchmark_config.json5`: run the empty-board benchmark through the Python bindings.
-- `python scripts/humanplay.py --config configs/humanplay/humanplay_config.json5`: run the terminal human-play interface backed by the Python bindings.
-- For Python tooling, create a separate conda env named `gameai`, install root `pyproject.toml` with `python -m pip install .`, then run the scripts from the repo root.
+- `python -m scripts.mcts.decide_params --trials 10 --games-per-side 2`: run Optuna-based MCTS tuning through the Python bindings.
+- `python -m scripts.mcts.benchmark --config configs/benchmark/benchmark_config.json5`: run the empty-board benchmark through the Python bindings.
+- `python -m scripts.humanplay.server start --config configs/humanplay/humanplay_config.json5`: run the browser human-play interface backed by the Python bindings.
+- For Python tooling, create a separate conda env named `gameai`, install root `pyproject.toml` with `python -m pip install .`, then run the modules from the repo root.
 
 ## Coding Style & Naming Conventions
 Use the existing language defaults: 4-space indentation for Kotlin, Gradle Kotlin, and C++; keep brace style consistent with nearby files. Kotlin/Java types use `UpperCamelCase`, functions and variables use `lowerCamelCase`, and Android resources use `snake_case` (for example `root_preferences.xml`). Keep CMake targets and native filenames aligned with their folder purpose.

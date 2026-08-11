@@ -6,9 +6,14 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import sys
 from dataclasses import dataclass
+from pathlib import Path
 
-from common import load_native_module
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from scripts.common import load_native_module
 
 
 POLICY_IDS = {"uniform": 0, "tactical": 1}

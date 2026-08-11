@@ -2,10 +2,14 @@
 from __future__ import annotations
 
 import argparse
+import sys
 import time
 from pathlib import Path
 
-from common import load_json5_config, load_native_module, repo_root
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from scripts.common import load_json5_config, load_native_module, repo_root
 
 
 def parse_args() -> argparse.Namespace:

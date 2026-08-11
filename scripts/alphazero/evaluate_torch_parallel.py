@@ -7,6 +7,7 @@ import argparse
 import json
 import math
 import os
+import sys
 import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from multiprocessing import get_context
@@ -23,22 +24,16 @@ import torch
 torch.set_num_threads(1)
 torch.set_num_interop_threads(1)
 
-try:
-    from alphazero import NeuralSearchConfig
-    from alphazero_torch import (
-        RULE_VERSION,
-        TorchPolicyValueNetwork,
-        _play_native_prior_game,
-    )
-    from common import load_native_module, repo_root
-except ImportError:  # pragma: no cover - supports package-style invocation
-    from scripts.alphazero import NeuralSearchConfig
-    from scripts.alphazero_torch import (
-        RULE_VERSION,
-        TorchPolicyValueNetwork,
-        _play_native_prior_game,
-    )
-    from scripts.common import load_native_module, repo_root
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from scripts.alphazero import NeuralSearchConfig
+from scripts.alphazero.torch_impl import (
+    RULE_VERSION,
+    TorchPolicyValueNetwork,
+    _play_native_prior_game,
+)
+from scripts.common import load_native_module, repo_root
 
 
 _WORKER_MODULE: Any | None = None

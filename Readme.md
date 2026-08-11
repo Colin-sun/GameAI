@@ -25,13 +25,13 @@ cmake --build build/native -j
 可运行的主命令：
 
 ```shell
-python ./scripts/decide_params.py --trials 10 --games-per-side 2
-python ./scripts/benchmark.py --config ./configs/benchmark/benchmark_config.json5
-python ./scripts/humanplay.py start --config ./configs/humanplay/humanplay_config.json5
-python ./scripts/humanplay.py stop
+python -m scripts.mcts.decide_params --trials 10 --games-per-side 2
+python -m scripts.mcts.benchmark --config ./configs/benchmark/benchmark_config.json5
+python -m scripts.humanplay.server start --config ./configs/humanplay/humanplay_config.json5
+python -m scripts.humanplay.server stop
 ```
 
-Python 脚本依赖和 `gameai_native` 绑定统一由根目录 `pyproject.toml` + `setup.py` 管理，`python -m pip install .` 后即可直接运行 `scripts/decide_params.py`、`scripts/benchmark.py` 和 `scripts/humanplay.py`，不需要再手动执行 CMake。
+Python 脚本依赖和 `gameai_native` 绑定统一由根目录 `pyproject.toml` + `setup.py` 管理，`python -m pip install .` 后即可直接运行 `scripts.mcts.decide_params`、`scripts.mcts.benchmark` 和 `scripts.humanplay.server`，不需要再手动执行 CMake。
 不要使用 `pip install -e .` 或 inplace 扩展构建，否则会偏离当前统一的 `build/` 目录约定。
 
 ## 目录
@@ -39,7 +39,7 @@ Python 脚本依赖和 `gameai_native` 绑定统一由根目录 `pyproject.toml`
 - `app/src/main/cpp/`: Android JNI 入口，`android/mcts_pure_bridge.cpp` 连接原生 MCTS。
 - `configs/`: 各模块 JSON5 配置。
 - `img/`: README 图片资源。
-- `scripts/`: Python 脚本入口，当前包含 benchmark、调参和浏览器版 humanplay；页面资源位于 `scripts/web/`。
+- `scripts/`: Python 工具入口，按功能分为 `mcts/`、`alphazero/` 和 `humanplay/`；网页资源位于 `scripts/humanplay/web/`。
 
 ## 说明
 当前仓库仅保留 pure MCTS、Python benchmark / 调参 / humanplay 和 Android JNI 主线。Android 构建仍可在 Android Studio 中导入 `app/` 后运行；本次默认优先验证 native binding 与 Python 路径，不额外跑 Android。

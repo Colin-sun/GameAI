@@ -3,10 +3,15 @@
 from __future__ import annotations
 
 import argparse
+import sys
+from pathlib import Path
 
 import optuna
 
-from common import load_native_module
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from scripts.common import load_native_module
 
 
 GAMEAI_NATIVE = load_native_module()

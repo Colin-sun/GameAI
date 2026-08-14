@@ -1,11 +1,16 @@
 /agent_files/
 
+node_modules/
+
 __pycache__
 *.egg-info
 gameai_native*.so
 gameai_native*.pyd
 
 models/
+
+# The browser extension ships one explicitly converted model resource.
+*.bin
 
 *.iml
 .gradle

@@ -1,0 +1,55 @@
+{
+  "manifest_version": 3,
+  "name": "GameAI Ultimate Tic-Tac-Toe",
+  "version": "0.1.0",
+  "description": "在 game.hullqin.cn/jzq 上提供 majority-utt-v1 人机对战与走子建议。",
+  "minimum_chrome_version": "111",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://game.hullqin.cn/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "GameAI",
+    "default_popup": "panel.html"
+  },
+  "commands": {
+    "search-suggestion": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+G",
+        "mac": "MacCtrl+Shift+G"
+      },
+      "description": "搜索当前局面的建议着"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://game.hullqin.cn/jzq*"],
+      "js": ["page-hook.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://game.hullqin.cn/jzq*"],
+      "js": ["engine.js", "content.js"],
+      "run_at": "document_idle",
+      "world": "ISOLATED"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "ai-worker.js",
+        "search-runtime.js",
+        "engine.js",
+        "model.js",
+        "models/*.bin"
+      ],
+      "matches": ["https://game.hullqin.cn/*"]
+    }
+  ]
+}

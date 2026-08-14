@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>GameAI</title>
+    <link rel="stylesheet" href="panel.css">
+  </head>
+  <body>
+    <main class="panel">
+      <header class="header">
+        <div class="brand"><span class="mark"></span><span>GameAI</span></div>
+        <span class="scope">majority-utt-v1</span>
+      </header>
+      <section class="status-block">
+        <div class="status" data-status>正在连接棋盘</div>
+        <div class="detail" data-detail></div>
+        <div class="progress" data-progress hidden><div class="progress-bar" data-progress-bar></div></div>
+      </section>
+      <section class="controls">
+        <label>搜索模式
+          <select data-field="mode">
+            <option value="pure">Pure MCTS</option>
+            <option value="tactical">Tactical MCTS</option>
+            <option value="prior">Prior model</option>
+          </select>
+        </label>
+        <label>AI 方
+          <select data-field="aiPlayer">
+            <option value="1">先手</option>
+            <option value="2">后手</option>
+          </select>
+        </label>
+        <label class="wide toggle"><input type="checkbox" data-field="autoPlay"><span>轮到 AI 自动落子</span></label>
+        <label>模拟次数
+          <input data-field="playouts" type="number" min="1" max="2000" step="1">
+        </label>
+        <label>探索系数
+          <input data-field="cPuct" type="number" min="0.05" max="4" step="0.05">
+        </label>
+        <label>Rollout 上限
+          <input data-field="rolloutLimit" type="number" min="1" max="128" step="1">
+        </label>
+      </section>
+      <section class="actions">
+        <button class="primary" data-action="suggest">搜索建议</button>
+        <button class="secondary" data-action="cancel" hidden>停止</button>
+        <button class="secondary" data-action="open" hidden>打开棋盘</button>
+        <button class="secondary" data-action="rule0" hidden>切换 r=0</button>
+        <button class="secondary" data-action="apply" hidden>采用</button>
+      </section>
+      <p class="suggestion" data-suggestion hidden></p>
+      <p class="model" data-model></p>
+      <p class="footer">仅接管本地对战页面，联机房间保持原网页行为。</p>
+    </main>
+    <script src="panel.js"></script>
+  </body>
+</html>

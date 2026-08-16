@@ -28,6 +28,8 @@ npm run build:extension:wasm
 2. 点击“加载已解压的扩展程序”，选择仓库中的 `extension/` 目录。
 3. 打开 [终极井字棋本地棋局](https://game.hullqin.cn/jzq?p=)。右下角会出现 GameAI 面板。
 
+crx 包如果安装失败，也可以解压 release 中的 zip 包，手动在 edge / chrome 的 extensions 解压缩的扩展安装扩展
+
 需要生成发布包时执行：
 
 ```shell

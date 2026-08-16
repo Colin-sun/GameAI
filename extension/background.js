@@ -1,14 +1,16 @@
 "use strict";
 
-importScripts("engine.js", "model.js", "search-runtime.js");
+importScripts("engine.js", "model.js", "wasm-runtime.js", "search-runtime.js");
 
 const DEFAULT_CONFIG = Object.freeze({
   mode: "tactical",
   autoPlay: true,
   aiPlayer: 2,
-  playouts: 256,
-  cPuct: 0.8,
+  playouts: 3000,
+  cPuct: 0.4,
   rolloutLimit: 32,
+  policyExponent: 0.5,
+  rootSelection: "visits",
   seed: 20260811,
 });
 

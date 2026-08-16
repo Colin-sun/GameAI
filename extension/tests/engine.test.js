@@ -68,7 +68,7 @@ test("tactical rollout prioritizes an immediate majority win", () => {
   assert.equal(state.winsGameWithAction(action, 1), true);
 });
 
-test("pure, tactical, and prior searches only return legal actions", async () => {
+test("uniform, tactical, and native-prior searches only return legal actions", async () => {
   const modelPath = require("node:path").join(
     __dirname,
     "..",
@@ -80,13 +80,12 @@ test("pure, tactical, and prior searches only return legal actions", async () =>
   const bytes = fs.readFileSync(modelPath);
   const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
   const model = PriorModel.fromArrayBuffer(buffer);
-  for (const mode of ["pure", "tactical", "prior"]) {
+  for (const mode of ["uniform", "tactical", "native-prior"]) {
     const state = new engine.GameState();
-    const search = new engine.MCTS({ mode, playouts: mode === "prior" ? 2 : 8, seed: 11 });
-    const result = await search.search(state, mode === "prior" ? model : null, { chunkSize: 2 });
+    const search = new engine.MCTS({ mode, playouts: mode === "native-prior" ? 2 : 8, seed: 11 });
+    const result = await search.search(state, mode === "native-prior" ? model : null, { chunkSize: 2 });
     assert.ok(state.isActionValid(result.action), `${mode} returned ${result.action}`);
-    assert.equal(result.rootVisits, mode === "prior" ? 2 : 8);
+    assert.equal(result.rootVisits, mode === "native-prior" ? 2 : 8);
     assert.ok(result.nodeCount >= 2);
   }
 });
-

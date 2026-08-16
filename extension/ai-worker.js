@@ -1,5 +1,5 @@
 importScripts("engine.js", "model.js");
-importScripts("search-runtime.js");
+importScripts("wasm-runtime.js", "search-runtime.js");
 
 (function () {
   "use strict";

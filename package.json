@@ -2,6 +2,10 @@
   "name": "gameai-extension-tests",
   "private": true,
   "scripts": {
+    "build:extension:wasm": "bash scripts/extension/build_wasm.sh",
+    "package:extension": "python scripts/extension/package_extension.py --format crx",
+    "package:extension:crx": "python scripts/extension/package_extension.py --format crx",
+    "package:extension:zip": "python scripts/extension/package_extension.py --format zip",
     "test:extension": "node --test extension/tests/*.test.js",
     "test:extension:e2e": "RUN_EXTENSION_E2E=1 node --test extension/tests/e2e.test.js"
   },

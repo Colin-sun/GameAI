@@ -4,6 +4,15 @@
   "version": "0.1.0",
   "description": "在 game.hullqin.cn/jzq 上提供 majority-utt-v1 人机对战与走子建议。",
   "minimum_chrome_version": "111",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  },
   "permissions": [
     "storage"
   ],
@@ -15,6 +24,11 @@
   },
   "action": {
     "default_title": "GameAI",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png"
+    },
     "default_popup": "panel.html"
   },
   "commands": {
@@ -45,8 +59,10 @@
       "resources": [
         "ai-worker.js",
         "search-runtime.js",
+        "wasm-runtime.js",
         "engine.js",
         "model.js",
+        "wasm/engine.wasm",
         "models/*.bin"
       ],
       "matches": ["https://game.hullqin.cn/*"]

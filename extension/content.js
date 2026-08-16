@@ -4,16 +4,41 @@
   const engine = globalThis.GameAIEngine;
   const PAGE_SOURCE = "gameai-page-hook-v1";
   const MODEL_FILE = "models/utt_majority_v1_torch_teacher6000_512_hard.bin";
+  const WASM_FILE = "wasm/engine.wasm";
+  const MODE_DEFAULTS = Object.freeze({
+    uniform: Object.freeze({
+      mode: "uniform",
+      playouts: 6200,
+      cPuct: 0.8,
+      rolloutLimit: 300,
+      policyExponent: 0.5,
+      rootSelection: "visits",
+    }),
+    tactical: Object.freeze({
+      mode: "tactical",
+      playouts: 3000,
+      cPuct: 0.4,
+      rolloutLimit: 32,
+      policyExponent: 0.5,
+      rootSelection: "visits",
+    }),
+    "native-prior": Object.freeze({
+      mode: "native-prior",
+      playouts: 12000,
+      cPuct: 0.2,
+      rolloutLimit: 32,
+      policyExponent: 0.5,
+      rootSelection: "q",
+    }),
+  });
+  const MODE_ALIASES = Object.freeze({ pure: "uniform", prior: "native-prior" });
   const DEFAULT_CONFIG = Object.freeze({
-    mode: "tactical",
+    ...MODE_DEFAULTS.tactical,
     autoPlay: true,
     aiPlayer: 2,
-    playouts: 256,
-    cPuct: 0.8,
-    rolloutLimit: 32,
     seed: 20260811,
   });
-  const MODES = new Set(["pure", "tactical", "prior"]);
+  const MODES = new Set(Object.keys(MODE_DEFAULTS).concat(Object.keys(MODE_ALIASES)));
   const MAX_MOVES_LENGTH = engine.ACTION_SIZE * 2;
 
   const config = { ...DEFAULT_CONFIG };
@@ -30,6 +55,8 @@
     suggestion: null,
     error: "",
     modelMetadata: null,
+    backend: "",
+    fallbackReason: "",
   };
 
   let requestSerial = 0;
@@ -49,16 +76,38 @@
 
   function normalizeConfig(values) {
     const source = values || {};
-    const mode = MODES.has(source.mode) ? source.mode : DEFAULT_CONFIG.mode;
+    const requestedMode = MODES.has(source.mode) ? source.mode : DEFAULT_CONFIG.mode;
+    const mode = MODE_ALIASES[requestedMode] || requestedMode;
+    const preset = MODE_DEFAULTS[mode];
+    const legacyConfig = source.policyExponent == null && source.rootSelection == null;
     const aiPlayer = Number(source.aiPlayer) === 1 ? 1 : 2;
     const cPuct = Number(source.cPuct);
+    const policyExponent = Number(source.policyExponent);
     return {
       mode,
       autoPlay: source.autoPlay !== false,
       aiPlayer,
-      playouts: clampInteger(source.playouts, DEFAULT_CONFIG.playouts, 1, 2000),
-      cPuct: Number.isFinite(cPuct) ? Math.min(4, Math.max(0.05, cPuct)) : DEFAULT_CONFIG.cPuct,
-      rolloutLimit: clampInteger(source.rolloutLimit, DEFAULT_CONFIG.rolloutLimit, 1, 128),
+      playouts: clampInteger(
+        legacyConfig ? preset.playouts : source.playouts,
+        preset.playouts,
+        1,
+        20000,
+      ),
+      cPuct: Number.isFinite(cPuct) && !legacyConfig
+        ? Math.min(4, Math.max(0.05, cPuct))
+        : preset.cPuct,
+      rolloutLimit: clampInteger(
+        legacyConfig ? preset.rolloutLimit : source.rolloutLimit,
+        preset.rolloutLimit,
+        1,
+        1024,
+      ),
+      policyExponent: Number.isFinite(policyExponent) && policyExponent > 0 && !legacyConfig
+        ? Math.min(2, policyExponent)
+        : preset.policyExponent,
+      rootSelection: source.rootSelection === "q" || source.rootSelection === "visits"
+        ? source.rootSelection
+        : preset.rootSelection,
       seed: clampInteger(source.seed, DEFAULT_CONFIG.seed, 1, 0x7fffffff),
     };
   }
@@ -101,6 +150,8 @@
       suggestion: state.suggestion,
       error: state.error,
       modelMetadata: state.modelMetadata,
+      backend: state.backend,
+      fallbackReason: state.fallbackReason,
       config: { ...config },
     };
   }
@@ -212,6 +263,8 @@
     cancelSearch(false);
     state.error = "";
     state.suggestion = null;
+    state.backend = "";
+    state.fallbackReason = "";
     clearOverlay();
     const id = ++requestSerial;
     activeRequest = {
@@ -233,9 +286,12 @@
           playouts: config.playouts,
           cPuct: config.cPuct,
           rolloutLimit: config.rolloutLimit,
+          policyExponent: config.policyExponent,
+          rootSelection: config.rootSelection,
           seed: (config.seed + state.moves.length + id) >>> 0,
-          chunkSize: 16,
+          chunkSize: 2048,
           modelUrl: chrome.runtime.getURL(MODEL_FILE),
+          wasmUrl: chrome.runtime.getURL(WASM_FILE),
         },
       }, (_response) => {
         if (!chrome.runtime.lastError) return;
@@ -265,6 +321,12 @@
     }
     if (message.type === "model-ready") {
       state.modelMetadata = message.metadata || null;
+      notify();
+      return;
+    }
+    if (message.type === "fallback") {
+      state.backend = "js-fallback";
+      state.fallbackReason = message.reason || "WASM 搜索不可用。";
       notify();
       return;
     }
@@ -313,7 +375,11 @@
       rootVisits: result.rootVisits,
       nodeCount: result.nodeCount,
       mode: result.mode,
+      backend: result.backend || state.backend || "wasm",
+      elapsedMs: result.elapsedMs,
     };
+    state.backend = result.backend || state.backend || "wasm";
+    state.fallbackReason = result.fallbackReason || state.fallbackReason;
     state.modelMetadata = result.metadata || state.modelMetadata;
     if (request.origin === "auto" && config.autoPlay &&
         state.game.currentPlayer === config.aiPlayer) {
@@ -357,6 +423,8 @@
     state.game = null;
     state.suggestion = null;
     state.error = "";
+    state.backend = "";
+    state.fallbackReason = "";
     clearOverlay();
     try {
       const url = new URL(nextHref);
@@ -416,7 +484,20 @@
   }
 
   function setConfig(values) {
-    Object.assign(config, normalizeConfig({ ...config, ...(values || {}) }));
+    const nextValues = values || {};
+    const requestedMode = nextValues.mode;
+    const nextMode = MODES.has(requestedMode)
+      ? (MODE_ALIASES[requestedMode] || requestedMode)
+      : config.mode;
+    const modeChanged = nextMode !== config.mode;
+    let merged;
+    if (modeChanged) {
+      const { playouts, cPuct, rolloutLimit, policyExponent, rootSelection, ...nonSearchValues } = nextValues;
+      merged = { ...config, ...MODE_DEFAULTS[nextMode], ...nonSearchValues, mode: nextMode };
+    } else {
+      merged = { ...config, ...nextValues };
+    }
+    Object.assign(config, normalizeConfig(merged));
     storageSet();
     renderPanel();
     notify();
@@ -428,14 +509,17 @@
     if (state.route === "unsupported") return "请在 /jzq 本地对战页面使用";
     if (state.route === "local-home") return "请打开本地对战棋盘";
     if (!state.hasGame) return state.error || "棋局尚未就绪";
+    const backendNote = state.backend === "js-fallback"
+      ? ` · 已切换 JS fallback：${state.fallbackReason}`
+      : "";
     if (state.phase === "searching") {
       const progress = state.progress;
-      return progress ? `搜索中 ${progress.completed}/${progress.total}` : "正在加载搜索";
+      return (progress ? `搜索中 ${progress.completed}/${progress.total}` : "正在加载搜索") + backendNote;
     }
     if (state.phase === "applying") return "正在落子";
     if (state.phase === "error") return state.error || "搜索失败";
     if (state.phase === "suggested" && state.suggestion) {
-      return `建议 ${state.suggestion.label}`;
+      return `建议 ${state.suggestion.label}${backendNote}`;
     }
     const done = state.game.getDoneWinner();
     if (done.done) {
@@ -459,6 +543,7 @@
     const progressBar = $("[data-progress-bar]");
     const suggestion = $("[data-suggestion]");
     const suggestionValue = $("[data-suggestion-value]");
+    const backend = $("[data-backend]");
     const suggestButton = $("[data-action='suggest']");
     const applyButton = $("[data-action='apply']");
     const cancelButton = $("[data-action='cancel']");
@@ -480,8 +565,17 @@
       progressBar.style.width = "0%";
     }
     suggestion.hidden = !(state.phase === "suggested" && state.suggestion);
+    if (backend) {
+      backend.textContent = state.backend === "js-fallback"
+        ? "JS fallback：" + state.fallbackReason
+        : (state.backend === "wasm" ? "WASM 搜索" : "");
+      backend.dataset.backend = state.backend;
+    }
     if (state.suggestion && suggestionValue) {
-      suggestionValue.textContent = `${state.suggestion.label}  ·  Q ${Number(state.suggestion.q || 0).toFixed(3)}`;
+      const timing = Number.isFinite(state.suggestion.elapsedMs)
+        ? `  ·  ${state.suggestion.elapsedMs} ms`
+        : "";
+      suggestionValue.textContent = `${state.suggestion.label}  ·  Q ${Number(state.suggestion.q || 0).toFixed(3)}${timing}`;
     }
     suggestButton.disabled = !state.supported || state.phase === "searching" || state.phase === "applying";
     applyButton.disabled = !state.suggestion || state.phase === "searching";
@@ -504,9 +598,9 @@
 
     const modelNote = $("[data-model]");
     if (modelNote) {
-      modelNote.textContent = config.mode === "prior"
-        ? (state.modelMetadata ? `${state.modelMetadata.channels}c / ${state.modelMetadata.blocks} blocks` : "模型按需加载")
-        : "未使用 prior model";
+      modelNote.textContent = config.mode === "native-prior"
+        ? (state.modelMetadata ? `AI 模型 · ${state.modelMetadata.channels}c / ${state.modelMetadata.blocks} blocks` : "AI 模型按需加载")
+        : "当前使用棋局搜索";
     }
   }
 
@@ -603,7 +697,8 @@
         .secondary { border: 1px solid #b9c3ce; background: white; color: #253241; }
         button:disabled { cursor: default; opacity: .45; }
         .suggestion-line { justify-content: space-between; margin-top: 9px; padding: 7px 8px; border: 1px solid #e0c36b; background: #fff8dc; color: #6b4d00; }
-        .model { color: #8994a1; font-size: 10px; margin-top: 8px; }
+        .model, .backend { color: #8994a1; font-size: 10px; margin-top: 8px; overflow-wrap: anywhere; }
+        .backend[data-backend="js-fallback"] { color: #9e2525; }
         @media (max-width: 480px) { .panel { width: calc(100vw - 16px); } }
       </style>
       <button class="collapsed-button" data-action="minimize" title="展开 GameAI">GameAI</button>
@@ -616,11 +711,11 @@
         <div class="detail" data-detail></div>
         <div class="progress" data-progress hidden><div class="progress-bar" data-progress-bar></div></div>
         <div class="grid">
-          <label>搜索模式
+          <label>难度
             <select data-field="mode">
-              <option value="pure">Pure MCTS</option>
-              <option value="tactical">Tactical MCTS</option>
-              <option value="prior">Prior model</option>
+              <option value="uniform">简单（均匀搜索）</option>
+              <option value="tactical">中等（战术搜索）</option>
+              <option value="native-prior">困难（AI 模型）</option>
             </select>
           </label>
           <label>AI 方
@@ -633,13 +728,13 @@
             <span class="toggle"><input type="checkbox" data-field="autoPlay"><span>轮到 AI 自动落子</span></span>
           </label>
           <label>模拟次数
-            <input data-field="playouts" type="number" min="1" max="2000" step="1">
+            <input data-field="playouts" type="number" min="1" max="20000" step="1">
           </label>
           <label>探索系数
             <input data-field="cPuct" type="number" min="0.05" max="4" step="0.05">
           </label>
           <label>Rollout 上限
-            <input data-field="rolloutLimit" type="number" min="1" max="128" step="1">
+            <input data-field="rolloutLimit" type="number" min="1" max="1024" step="1">
           </label>
         </div>
         <div class="actions">
@@ -653,6 +748,7 @@
           <button class="secondary" data-action="apply">采用</button>
         </div>
         <div class="model" data-model></div>
+        <div class="backend" data-backend></div>
       </section>`;
     bindPanelEvents();
     renderPanel();

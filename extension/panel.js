@@ -5,9 +5,11 @@
     mode: "tactical",
     autoPlay: true,
     aiPlayer: 2,
-    playouts: 256,
-    cPuct: 0.8,
+    playouts: 3000,
+    cPuct: 0.4,
     rolloutLimit: 32,
+    policyExponent: 0.5,
+    rootSelection: "visits",
     seed: 20260811,
   };
   let activeTabId = null;
@@ -42,6 +44,10 @@
     const status = $("[data-status]");
     status.textContent = state.error && state.phase === "error" ? state.error : statusText(state);
     status.dataset.phase = state.phase || "idle";
+    $("[data-backend]").textContent = state.backend === "js-fallback"
+      ? "JS fallback：" + (state.fallbackReason || "WASM 搜索不可用")
+      : (state.backend === "wasm" ? "WASM 搜索" : "");
+    $("[data-backend]").dataset.backend = state.backend || "";
     $("[data-detail]").textContent = state.hasGame
       ? `${state.moveCount} 手 · ${state.currentPlayer === state.config.aiPlayer ? "AI" : "你"} · 可走 ${state.legalCount}`
       : "";
@@ -71,8 +77,11 @@
     $("[data-suggestion]").textContent = state.suggestion
       ? `建议 ${state.suggestion.label} · Q ${Number(state.suggestion.q || 0).toFixed(3)}`
       : "";
-    $("[data-model]").textContent = config.mode === "prior"
-      ? (state.modelMetadata ? `${state.modelMetadata.checkpoint} · ${state.modelMetadata.channels}c / ${state.modelMetadata.blocks} blocks` : "Prior model 按需加载")
+    if (state.suggestion && Number.isFinite(state.suggestion.elapsedMs)) {
+      $("[data-suggestion]").textContent += ` · ${state.suggestion.elapsedMs} ms`;
+    }
+    $("[data-model]").textContent = config.mode === "native-prior"
+      ? (state.modelMetadata ? `${state.modelMetadata.checkpoint} · ${state.modelMetadata.channels}c / ${state.modelMetadata.blocks} blocks` : "AI 模型按需加载")
       : "";
   }
 

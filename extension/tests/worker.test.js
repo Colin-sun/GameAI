@@ -78,6 +78,8 @@ test("AI worker runs a pure search and reports progress/result", async () => {
   } });
   const result = await waitForMessage(messages, (message) => message.type === "result" && message.id === 1);
   assert.ok(result.result.siteAction >= 0 && result.result.siteAction < 81);
+  assert.equal(result.result.backend, "js-fallback");
+  assert.ok(messages.some((message) => message.type === "fallback" && message.id === 1));
   assert.ok(messages.some((message) => message.type === "progress" && message.id === 1));
 });
 
@@ -100,4 +102,3 @@ test("AI worker loads and runs the prior model", async () => {
   assert.equal(result.result.metadata.ruleVersion, "majority-utt-v1");
   assert.ok(result.result.siteAction >= 0 && result.result.siteAction < 81);
 });
-

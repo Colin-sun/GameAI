@@ -426,11 +426,15 @@
 
   class MCTS {
     constructor(options = {}) {
-      this.mode = options.mode || "tactical";
+      const requestedMode = options.mode || "tactical";
+      this.mode = requestedMode === "pure" ? "uniform" :
+        (requestedMode === "prior" ? "native-prior" : requestedMode);
       this.playouts = Math.max(1, Math.floor(options.playouts || 512));
       this.cPuct = Number(options.cPuct || 0.3);
       this.rolloutLimit = Math.max(1, Math.floor(options.rolloutLimit || 32));
-      this.rootSelection = options.rootSelection || (this.mode === "prior" ? "q" : "visits");
+      this.policyExponent = Number.isFinite(Number(options.policyExponent)) &&
+        Number(options.policyExponent) > 0 ? Number(options.policyExponent) : 0.5;
+      this.rootSelection = options.rootSelection || (this.mode === "native-prior" ? "q" : "visits");
       this.random = new RandomSource(options.seed);
       this.root = new SearchNode();
     }
@@ -467,7 +471,7 @@
         }
         const actions = state.getValidActions();
         if (!actions.length) throw new Error("Non-terminal state has no rollout action.");
-        const policy = this.mode === "pure" ? 0 : 1;
+        const policy = this.mode === "uniform" ? 0 : 1;
         const action = state.selectRolloutAction(actions, this.random, policy);
         if (!state.makeMove(action)) throw new Error("Rollout selected an invalid action.");
       }
@@ -506,10 +510,14 @@
 
     rootPriors(game, model) {
       const actions = game.getValidActions();
-      if (this.mode !== "prior") return uniformPriors(actions);
+      if (this.mode !== "native-prior") return uniformPriors(actions);
       if (!model) throw new Error("The prior model is not loaded.");
       const prediction = model.predict(encodeState(game));
-      return maskedPolicy(prediction.policy, actions);
+      const policy = new Float32Array(prediction.policy.length);
+      for (let index = 0; index < policy.length; index += 1) {
+        policy[index] = Math.pow(Math.max(0, prediction.policy[index]), this.policyExponent);
+      }
+      return maskedPolicy(policy, actions);
     }
 
     chooseAction() {
@@ -535,7 +543,7 @@
       const actions = game.getValidActions();
       if (!actions.length) return { action: -1, rootVisits: 0, nodeCount: 1, winner: 0 };
 
-      if (this.mode === "prior") {
+      if (this.mode === "native-prior") {
         this.expand(this.root, actions, this.rootPriors(game, model));
       }
       const chunkSize = Math.max(1, Math.min(32, Math.floor(hooks.chunkSize || 16)));

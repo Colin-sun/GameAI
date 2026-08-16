@@ -24,6 +24,8 @@ models/
 /.idea/assetWizardSettings.xml
 .DS_Store
 build/
+/dist/
+*.wasm
 /captures
 .externalNativeBuild
 .cxx

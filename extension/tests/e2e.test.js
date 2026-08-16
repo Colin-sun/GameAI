@@ -90,33 +90,52 @@ test("loads the MV3 extension and exercises all three search modes", { skip: !en
     await page.goto("https://game.hullqin.cn/jzq?p=", { waitUntil: "domcontentloaded" });
     const panel = page.locator("gameai-panel");
     await panel.waitFor({ state: "visible", timeout: 10000 });
+    assert.equal(await panel.locator("[data-field='mode']").inputValue(), "tactical");
+    assert.equal(await panel.locator("[data-field='playouts']").inputValue(), "3000");
+    assert.equal(await panel.locator("[data-field='cPuct']").inputValue(), "0.4");
+    assert.equal(await panel.locator("[data-field='rolloutLimit']").inputValue(), "32");
+    assert.deepEqual(
+      await panel.locator("[data-field='mode'] option").allTextContents(),
+      ["简单（均匀搜索）", "中等（战术搜索）", "困难（AI 模型）"],
+    );
     const status = panel.locator("[data-status]");
     await panel.locator("[data-field='autoPlay']").uncheck();
     await panel.locator("[data-field='playouts']").fill("128");
     await panel.locator("[data-field='playouts']").press("Tab");
 
-    for (const [index, mode] of ["pure", "tactical", "prior"].entries()) {
-      if (index > 0) {
-        await panel.locator("[data-field='playouts']").fill("4");
-        await panel.locator("[data-field='playouts']").press("Tab");
-      }
+    const expected = {
+      uniform: ["6200", "0.8", "300"],
+      tactical: ["3000", "0.4", "32"],
+      "native-prior": ["12000", "0.2", "32"],
+    };
+    for (const mode of ["uniform", "tactical", "native-prior"]) {
       await panel.locator("[data-field='mode']").selectOption(mode);
+      assert.deepEqual(
+        await Promise.all([
+          panel.locator("[data-field='playouts']").inputValue(),
+          panel.locator("[data-field='cPuct']").inputValue(),
+          panel.locator("[data-field='rolloutLimit']").inputValue(),
+        ]),
+        expected[mode],
+      );
       await panel.locator("[data-action='suggest']").click();
-      if (index === 0) {
-        await page.locator("#gameai-search-lock").waitFor({ state: "attached", timeout: 5000 });
-      }
+      await page.locator("#gameai-search-lock").waitFor({ state: "attached", timeout: 5000 });
       await page.waitForFunction(() => {
         const element = document.querySelector("gameai-panel");
         return element && /建议/.test(element.shadowRoot.querySelector("[data-status]").textContent);
       }, null, { timeout: mode === "prior" ? 15000 : 5000 });
       assert.match(await status.textContent(), /建议/);
       assert.ok(await page.locator("#gameai-suggestion-overlay").count());
+      assert.equal(await panel.locator("[data-backend]").textContent(), "WASM 搜索");
+      const timing = (await panel.locator("[data-suggestion]").textContent()).match(/(\d+) ms/);
+      assert.ok(timing, `missing search timing for ${mode}`);
+      assert.ok(Number(timing[1]) < 1000, `${mode} search took ${timing[1]} ms`);
     }
     assert.match(await panel.locator("[data-model]").textContent(), /128c/);
 
     await panel.locator("[data-field='aiPlayer']").selectOption("1");
     await panel.locator("[data-field='autoPlay']").check();
-    await panel.locator("[data-field='mode']").selectOption("pure");
+    await panel.locator("[data-field='mode']").selectOption("uniform");
     await panel.locator("[data-field='playouts']").fill("2");
     await panel.locator("[data-field='playouts']").press("Tab");
     await page.waitForFunction(() => {

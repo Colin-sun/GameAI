@@ -39,5 +39,6 @@ button { min-height: 32px; border-radius: 5px; padding: 0 10px; font: 650 12px/1
 .secondary { border: 1px solid #b9c3ce; background: white; color: #253241; }
 button:disabled { cursor: default; opacity: .45; }
 .suggestion { margin: 10px 0 0; padding: 7px 9px; border: 1px solid #e0c36b; background: #fff8dc; color: #6b4d00; }
-.model { min-height: 16px; margin: 9px 0 0; color: #8994a1; font-size: 10px; }
+.model, .backend { min-height: 16px; margin: 9px 0 0; color: #8994a1; font-size: 10px; overflow-wrap: anywhere; }
+.backend[data-backend="js-fallback"] { color: #9e2525; }
 .footer { margin: 11px 0 0; color: #8994a1; font-size: 10px; }
